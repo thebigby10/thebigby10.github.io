@@ -35,3 +35,37 @@ body {
     text-align: center;
     margin-top: 30dvh;
 }
+
+.main-content > h6 {
+    margin-top: 30dvh;
+}
+
+.color-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.color-div {
+    width: 80px;
+    height: 80px;
+    background-color: red;
+    margin: 10px;
+    border-style: solid;
+}
+
+#color-1 {
+    background-color: #f3f3f1;
+}
+#color-2 {
+    background-color: #c89483;
+}
+#color-3 {
+    background-color: #5faec5;
+}
+#color-4 {
+    background-color: #aa3c72;
+}
+#color-5 {
+    background-color: #2d7fdc;
+}
