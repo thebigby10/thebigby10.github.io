@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Categories on m9s</title>
+    <link>http://localhost:1313/categories/</link>
+    <description>Recent content in Categories on m9s</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 10 Dec 2024 00:24:26 +0600</lastBuildDate>
+    <atom:link href="http://localhost:1313/categories/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Random</title>
+      <link>http://localhost:1313/categories/random/</link>
+      <pubDate>Tue, 10 Dec 2024 00:24:26 +0600</pubDate>
+      <guid>http://localhost:1313/categories/random/</guid>
+      <description></description>
+    </item>
+  </channel>
+</rss>

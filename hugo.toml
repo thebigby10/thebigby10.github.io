@@ -1,0 +1,43 @@
+baseURL = 'https://thebigby01.xyz/'
+languageCode = 'en-us'
+title = 'm9s'
+
+theme = "paper"
+
+[params]
+  color = 'wheat'
+
+  # header social icons
+  github = 'thebigby10'                           
+  linkedin = 'thebigby01'
+
+  # home page profile
+  avatar = "https://avatars.githubusercontent.com/u/142800049"
+  name = "thebigby01"
+  bio = "Tech Enthusiast"
+  
+  favicon = "https://avatars.githubusercontent.com/u/142800049"
+
+  
+  sectionPagesMenu = 'main'
+
+
+
+[menus]
+  [[menus.main]]
+    name = 'Home'
+    pageRef = '/'
+    weight = 10
+  [[menus.main]]
+    name = 'K12e'
+    pageRef = '/knowledge-base'
+    weight = 20
+  [[menus.main]]
+    name = 'P15s'
+    pageRef = '/project-learnings'
+    weight = 30
+  [[menus.main]]
+    name = 'Randoms'
+    pageRef = '/random'
+    weight = 40
+

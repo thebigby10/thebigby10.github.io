@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>m9s</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content on m9s</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 10 Dec 2024 00:24:26 +0600</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>mylearnings init: How I setup hugo for my knowledge base</title>
+      <link>http://localhost:1313/random/m9s/</link>
+      <pubDate>Tue, 10 Dec 2024 00:24:26 +0600</pubDate>
+      <guid>http://localhost:1313/random/m9s/</guid>
+      <description>&lt;h2 id=&#34;how-i-setup-hugo-for-my-knowledge-base&#34;&gt;How I setup Hugo for my knowledge base&lt;/h2&gt;&#xA;&lt;h3 id=&#34;basic-setup&#34;&gt;Basic Setup&lt;/h3&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;Follow Hugo getting started &lt;a href=&#34;https://gohugo.io/getting-started/quick-start/&#34;&gt;Quick Start&lt;/a&gt; to get Hugo installed and running.&lt;/li&gt;&#xA;&lt;li&gt;Clone the &lt;a href=&#34;https://github.com/nanxiaobei/hugo-paper&#34;&gt;hugo-paper&lt;/a&gt; theme. Follow the &lt;a href=&#34;https://gohugo.io/getting-started/quick-start/&#34;&gt;Quick Start&lt;/a&gt; Page for reference.&lt;/li&gt;&#xA;&lt;li&gt;Create a new Hugo site using the theme.&lt;/li&gt;&#xA;&lt;li&gt;Modify the hugo.toml file for &lt;a href=&#34;https://github.com/nanxiaobei/hugo-paper&#34;&gt;hugo-paper&lt;/a&gt;.&lt;/li&gt;&#xA;&lt;li&gt;Run &lt;code&gt;hugo server&lt;/code&gt; to start the server.&lt;/li&gt;&#xA;&lt;/ol&gt;&#xA;&lt;h3 id=&#34;creating-a-new-post&#34;&gt;Creating a new post&lt;/h3&gt;&#xA;&lt;ol&gt;&#xA;&lt;li&gt;Run &lt;code&gt;hugo new post/my-post.md&lt;/code&gt; to create a new post. Where &lt;code&gt;my-post.md&lt;/code&gt; is the name of the post.&#xA;&lt;ul&gt;&#xA;&lt;li&gt;The post will be created in the &lt;code&gt;content/post&lt;/code&gt; directory.&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;Edit the post file.&#xA;&lt;ul&gt;&#xA;&lt;li&gt;Update the content of the front matter.&lt;/li&gt;&#xA;&lt;li&gt;Add content below the front matter.&lt;/li&gt;&#xA;&lt;/ul&gt;&#xA;&lt;/li&gt;&#xA;&lt;li&gt;Set the &lt;code&gt;draft&lt;/code&gt; parameter to &lt;code&gt;false&lt;/code&gt; to publish the post.&lt;/li&gt;&#xA;&lt;/ol&gt;&#xA;&lt;h3 id=&#34;adding-a-menu&#34;&gt;Adding a menu&lt;/h3&gt;&#xA;&lt;p&gt;Reference : &lt;a href=&#34;https://gohugo.io/content-management/menus/&#34;&gt;hugo-menus&lt;/a&gt;&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>
