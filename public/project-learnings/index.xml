@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Project-Learnings on m9s</title>
+    <link>http://localhost:1313/project-learnings/</link>
+    <description>Recent content in Project-Learnings on m9s</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 10 Dec 2024 02:28:57 +0600</lastBuildDate>
+    <atom:link href="http://localhost:1313/project-learnings/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Jonobarta</title>
+      <link>http://localhost:1313/project-learnings/jonobarta/</link>
+      <pubDate>Tue, 10 Dec 2024 02:28:57 +0600</pubDate>
+      <guid>http://localhost:1313/project-learnings/jonobarta/</guid>
+      <description>&lt;h2 id=&#34;jonobarta&#34;&gt;Jonobarta&lt;/h2&gt;&#xA;&lt;h3 id=&#34;database-planning&#34;&gt;Database Planning&lt;/h3&gt;&#xA;&lt;ul&gt;&#xA;&lt;li&gt;User(built-in)&lt;/li&gt;&#xA;&lt;li&gt;user_management&lt;/li&gt;&#xA;&lt;li&gt;location&lt;/li&gt;&#xA;&lt;li&gt;post&lt;/li&gt;&#xA;&lt;li&gt;missing_person_info&lt;/li&gt;&#xA;&lt;li&gt;belonging_electronic_details&lt;/li&gt;&#xA;&lt;li&gt;belonging_other_details&lt;/li&gt;&#xA;&lt;li&gt;crime_details&lt;/li&gt;&#xA;&lt;li&gt;awareness_details&lt;/li&gt;&#xA;&lt;li&gt;comment&lt;/li&gt;&#xA;&lt;li&gt;crime_heatmap&lt;/li&gt;&#xA;&lt;li&gt;transparent_market_item&lt;/li&gt;&#xA;&lt;/ul&gt;</description>
+    </item>
+  </channel>
+</rss>

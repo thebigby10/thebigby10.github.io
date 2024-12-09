@@ -1,7 +1,7 @@
 +++
 date = '2024-12-10T00:24:26+06:00'
 draft = false
-title = 'mylearnings init: How I setup hugo for my knowledge base'
+title = '(m9s)mylearnings init: How I setup hugo for my knowledge base'
 tags = ["Hugo", "Tutorial", "Static Site Generator"]
 categories = ["random"]
 +++
@@ -16,7 +16,7 @@ categories = ["random"]
 
 ### Creating a new post
 Markdown Cheatshee: [markdown-guide](https://www.markdownguide.org/cheat-sheet/)
-1. Run `hugo new post/my-post.md` to create a new post. Where `my-post.md` is the name of the post.
+1. Run `hugo new content post/my-post.md` to create a new post. Where `my-post.md` is the name of the post.
     - The post will be created in the `content/post` directory.
 2. Edit the post file.
     - Update the content of the front matter.
@@ -44,3 +44,5 @@ Reference : [hugo-menus](https://gohugo.io/content-management/menus/)
 
 ### Deploy to GitHub Pages
 Reference: [Host-on-Github-Pages](https://gohugo.io/hosting-and-deployment/hosting-on-github/)
+
+*Written from 10.12.2024 12.30AM to 10.12.2024 2:15AM* 
