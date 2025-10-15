@@ -3,6 +3,19 @@ languageCode = 'en-us'
 title = 'ThebigbyXX_kb'
 theme = 'PaperMod'
 
+# Enables the creation of the search index file
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+
+[params]
+    # Shows the search icon in the header
+    ShowSearch = true
+
+[[menu.main]]
+    name = "Search"
+    url = "/search/"
+    weight = 5
+
 [[menu.main]]
     name = "Projects"
     url = "/projects/"
