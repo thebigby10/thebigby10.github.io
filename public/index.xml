@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>ThebigbyXX_kb</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content on ThebigbyXX_kb</description>
+    <generator>Hugo -- 0.151.0</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 15 Oct 2025 22:05:29 +0600</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>How XX Use Hugo</title>
+      <link>http://localhost:1313/posts/how-xx-use-hugo/</link>
+      <pubDate>Wed, 15 Oct 2025 22:05:29 +0600</pubDate>
+      <guid>http://localhost:1313/posts/how-xx-use-hugo/</guid>
+      <description>&lt;h2 id=&#34;how-to-use-hugo-to-host-your-personal-knowledge-base&#34;&gt;How to use Hugo to host your personal knowledge base&lt;/h2&gt;
+&lt;h3 id=&#34;prerequisites&#34;&gt;Prerequisites&lt;/h3&gt;</description>
+    </item>
+  </channel>
+</rss>
