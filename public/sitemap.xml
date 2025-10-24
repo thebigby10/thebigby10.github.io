@@ -3,12 +3,24 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>http://localhost:1313/learnings/</loc>
-    <lastmod>2025-10-16T01:14:45+06:00</lastmod>
+    <lastmod>2025-10-20T04:05:10+06:00</lastmod>
   </url><url>
-    <loc>http://localhost:1313/learnings/backend/monolith-vs-microservice/</loc>
-    <lastmod>2025-10-16T01:14:45+06:00</lastmod>
+    <loc>http://localhost:1313/learnings/neural-network/neural-network-overview/</loc>
+    <lastmod>2025-10-20T04:05:10+06:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/</loc>
+    <lastmod>2025-10-20T04:05:10+06:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/learnings/llm/core-concepts-of-llm/</loc>
+    <lastmod>2025-10-19T19:56:48+06:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/projects/prometheus/how-to-use-raw-sql-db-with-node/</loc>
+    <lastmod>2025-10-18T23:13:57+06:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/projects/</loc>
+    <lastmod>2025-10-18T23:13:57+06:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/learnings/backend/monolith-vs-microservice/</loc>
     <lastmod>2025-10-16T01:14:45+06:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/learnings/devops/networking-concepts-for-devops/</loc>

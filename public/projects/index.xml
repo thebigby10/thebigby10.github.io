@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Projects on ThebigbyXX_kb</title>
+    <link>http://localhost:1313/projects/</link>
+    <description>Recent content in Projects on ThebigbyXX_kb</description>
+    <generator>Hugo -- 0.151.2</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 18 Oct 2025 23:13:57 +0600</lastBuildDate>
+    <atom:link href="http://localhost:1313/projects/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>How to Use Raw Sql Db With Node</title>
+      <link>http://localhost:1313/projects/prometheus/how-to-use-raw-sql-db-with-node/</link>
+      <pubDate>Sat, 18 Oct 2025 23:13:57 +0600</pubDate>
+      <guid>http://localhost:1313/projects/prometheus/how-to-use-raw-sql-db-with-node/</guid>
+      <description></description>
+    </item>
+  </channel>
+</rss>
