@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Md. Abidur Rahman — Software Engineer</title>
-<meta name="description" content="Md. Abidur Rahman — software engineer working on web platforms, developer tooling, and AI systems. Currently at CPS Academy.">
+<meta name="description" content="Md. Abidur Rahman — software engineer working on web platforms, developer tooling, and AI systems. Also makes games in Godot, models in Blender, and designs in Inkscape and Krita. Currently at CPS Academy.">
 <meta name="author" content="Md. Abidur Rahman">
 <meta property="og:title" content="Md. Abidur Rahman — Software Engineer">
-<meta property="og:description" content="Software engineer working on web platforms, developer tooling, and AI systems.">
+<meta property="og:description" content="Software engineer working on web platforms, developer tooling, and AI systems. Games, 3D, and design on the side.">
 <meta property="og:type" content="website">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111'/><text y='74' x='50' text-anchor='middle' font-family='Helvetica,Arial' font-size='64' font-weight='700' fill='%23fff'>A</text></svg>">
 
@@ -137,6 +137,20 @@ h1,h2,h3,h4{margin:0;font-weight:700;letter-spacing:-.02em;}
   letter-spacing:-.012em;
   max-width:34ch;
 }
+.lead-sub{
+  font-size:15px;
+  line-height:1.5;
+  color:var(--mid);
+  max-width:38ch;
+  padding-top:14px;
+}
+.sec-lead{
+  font-size:15px;
+  line-height:1.5;
+  color:var(--mid);
+  max-width:52ch;
+  padding-top:14px;
+}
 p{margin:0 0 .8em;}
 p:last-child{margin-bottom:0;}
 
@@ -160,7 +174,7 @@ header.bar{
   white-space:nowrap;
 }
 nav.idx{
-  display:flex;gap:20px;margin-left:auto;align-items:baseline;
+  display:flex;gap:16px;margin-left:auto;align-items:baseline;
   overflow:hidden;
 }
 nav.idx a{
@@ -172,7 +186,7 @@ nav.idx a{
 }
 nav.idx a:hover{color:var(--ink);border-bottom-color:var(--ink);}
 nav.idx a[aria-current="true"]{color:var(--ink);border-bottom-color:var(--ink);}
-@media (max-width:980px){ nav.idx{display:none;} }
+@media (max-width:1120px){ nav.idx{display:none;} }
 
 .gridbtn{
   margin-left:auto;
@@ -227,7 +241,7 @@ section{padding:clamp(40px,6vw,80px) 0;border-bottom:1px solid var(--rule);}
 .sec-head{padding-bottom:26px;}
 .sec-head .h2{margin-top:2px;}
 
-/* ---- entries (experience / open source) ---- */
+/* ---- entries (experience / games / design / open source) ---- */
 .entry{
   display:grid;grid-template-columns:repeat(10,1fr);gap:var(--gutter);
   padding:22px 0;
@@ -300,6 +314,37 @@ ul.bul li::before{
   border-bottom:1px solid var(--ink);padding-bottom:2px;
 }
 .p-link:hover{background:var(--ink);color:var(--paper);}
+.p-links{display:flex;flex-wrap:wrap;gap:20px;}
+
+/* ---- image plates (design / 3D) ---- */
+.plates{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gutter);
+  padding:24px 0 42px;
+}
+@media (max-width:900px){ .plates{grid-template-columns:repeat(2,1fr);} }
+@media (max-width:560px){ .plates{grid-template-columns:1fr;} }
+.plate{margin:0;}
+.plate .frame{
+  position:relative;
+  aspect-ratio:4 / 3;
+  background:var(--tint);
+  border:1px solid var(--rule);
+  overflow:hidden;
+}
+.plate .frame img{
+  position:relative;z-index:1;
+  display:block;width:100%;height:100%;
+  object-fit:cover;background:var(--paper);
+}
+.plate .ph{
+  position:absolute;inset:0;z-index:0;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--faint);
+}
+.plate figcaption{
+  font-size:13px;line-height:1.4;color:var(--mid);
+  padding-top:8px;
+}
 
 /* ---- achievements ---- */
 .ach{
@@ -381,6 +426,7 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
 @media print{
   header.bar,.gridbtn,#gridlines,.actions{display:none;}
   section{page-break-inside:avoid;}
+  .plates{display:none;}
 }
 </style>
 </head>
@@ -400,11 +446,13 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
       <nav class="idx" aria-label="Sections">
         <a href="#experience">01 Experience</a>
         <a href="#projects">02 Projects</a>
-        <a href="#achievements">03 Achievements</a>
-        <a href="#open-source">04 Open source</a>
-        <a href="#skills">05 Skills</a>
-        <a href="#education">06 Education</a>
-        <a href="#contact">07 Contact</a>
+        <a href="#games">03 Games</a>
+        <a href="#design">04 Design</a>
+        <a href="#achievements">05 Achievements</a>
+        <a href="#open-source">06 Open source</a>
+        <a href="#skills">07 Skills</a>
+        <a href="#education">08 Education</a>
+        <a href="#contact">09 Contact</a>
       </nav>
       <button class="gridbtn" id="gridbtn" type="button" aria-pressed="false">Grid</button>
     </div>
@@ -423,6 +471,7 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
           <div class="hero-role">
             <p class="label" style="padding-bottom:14px;">Software Engineer</p>
             <p class="lead">I build web platforms, developer tooling, and AI systems. Currently at CPS Academy, running a Next.js and Strapi platform used by 4,500+ students.</p>
+            <p class="lead-sub">Away from the terminal I make small games in Godot, model and simulate in Blender, and draw in Inkscape and Krita. I like finding out how things work.</p>
             <div class="actions">
               <a class="btn btn-solid" href="Md_Abidur_Rahman_Resume.pdf" download>Download resume</a>
               <a class="btn" href="mailto:md.arahmanasif@gmail.com">Email me</a>
@@ -436,6 +485,7 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
               <dt>Email</dt><dd><a href="mailto:md.arahmanasif@gmail.com">md.arahmanasif@gmail.com</a></dd>
               <dt>GitHub</dt><dd><a href="https://github.com/thebigby10" target="_blank" rel="noopener">github.com/thebigby10</a></dd>
               <dt>LinkedIn</dt><dd><a href="https://linkedin.com/in/thebigby01" target="_blank" rel="noopener">linkedin.com/in/thebigby01</a></dd>
+              <dt>Itch</dt><dd><a href="https://thebigby11.itch.io" target="_blank" rel="noopener">thebigby11.itch.io</a></dd>
             </dl>
           </div>
         </div>
@@ -617,11 +667,228 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
     </div>
   </section>
 
-  <!-- ================= 03 ACHIEVEMENTS ================= -->
-  <section id="achievements">
+  <!-- ================= 03 GAMES ================= -->
+  <section id="games">
     <div class="wrap">
       <div class="grid sec-head rv">
         <div class="col-label"><span class="label num">03</span></div>
+        <div class="col-main">
+          <h2 class="h2">Games</h2>
+          <p class="sec-lead">Jam games, mostly. Godot and GDScript for the engine, Aseprite for the pixel art and animation. Short builds, fixed deadlines, everything made in a weekend.</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="col-label"></div>
+        <div class="col-main">
+
+          <article class="entry rv">
+            <div class="entry-when"><span class="label">Weekly<br>Game Jam 142</span></div>
+            <div class="entry-what">
+              <h3 class="h3">No Mischief</h3>
+              <p class="org">Top-down shooter · Windows and Linux</p>
+              <div class="stack">
+                <span>Godot</span><span>GDScript</span><span>Aseprite</span>
+              </div>
+              <div class="p-links">
+                <a class="p-link" href="https://thebigby11.itch.io/no-mischief" target="_blank" rel="noopener">Play on itch.io →</a>
+              </div>
+            </div>
+            <div class="entry-notes">
+              <ul class="bul">
+                <li>You wake up with one instruction — "No Mischief" — and have to work out what it means.</li>
+                <li>Keyboard and mouse, about a half-hour run, with downloadable builds for both Windows and Linux.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="entry rv">
+            <div class="entry-when"><span class="label">ICT Fest<br>Game Jam</span></div>
+            <div class="entry-what">
+              <h3 class="h3">Prototype</h3>
+              <p class="org">Game-dev simulation</p>
+              <div class="stack">
+                <span>Godot</span><span>GDScript</span><span>GDShader</span>
+              </div>
+              <div class="p-links">
+                <a class="p-link" href="https://github.com/thebigby10/iut-cs-gamejam-prototype" target="_blank" rel="noopener">View source →</a>
+              </div>
+            </div>
+            <div class="entry-notes">
+              <ul class="bul">
+                <li>Jam theme was "It's hard to cook." Read it as "it's hard to cook a game" and built a small sim about trying to ship one.</li>
+                <li>Card-driven scenes in Godot with branching failure states — the studio can go bankrupt or the shop can shut down — over a custom shader background.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="entry rv">
+            <div class="entry-when"><span class="label">GABA<br>Hackday · Won</span></div>
+            <div class="entry-what">
+              <h3 class="h3">The Deposition</h3>
+              <p class="org">AI detective interrogation game · Browser</p>
+              <div class="stack">
+                <span>Pixi.js</span><span>Gemini API</span><span>JavaScript</span>
+              </div>
+              <div class="p-links">
+                <a class="p-link" href="https://the-deposition-two.vercel.app/" target="_blank" rel="noopener">Play it live →</a>
+              </div>
+            </div>
+            <div class="entry-notes">
+              <ul class="bul">
+                <li>Question a suspect who stays in character and answers in real time, driven by the Gemini API.</li>
+                <li>Runs entirely in the browser, rendered with Pixi.js. Won GABA Hackday 2026.</li>
+              </ul>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 04 DESIGN & 3D ================= -->
+  <!--
+    IMAGE SLOTS — how to fill them
+
+    1. Commit your files into the repo, e.g.  assets/design/design-01.jpg
+                                              assets/render/render-01.jpg
+    2. Match the src paths below, or rename your files to match.
+    3. Replace each alt text and <figcaption> with a real description.
+    4. Landscape images around 1200x900 (4:3) crop cleanest; anything else
+       is centre-cropped to fit the frame.
+
+    Any slot whose file is missing stays a quiet grey frame — it will not
+    show a broken-image icon. Delete slots you do not need.
+  -->
+  <section id="design">
+    <div class="wrap">
+      <div class="grid sec-head rv">
+        <div class="col-label"><span class="label num">04</span></div>
+        <div class="col-main">
+          <h2 class="h2">Design &amp; 3D</h2>
+          <p class="sec-lead">The non-code half. Vector and raster work for posters, covers, and interfaces, plus 3D modelling and simulation.</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="col-label"></div>
+        <div class="col-main">
+
+          <article class="entry rv">
+            <div class="entry-when"><span class="label">Graphics</span></div>
+            <div class="entry-what">
+              <h3 class="h3">Graphic design</h3>
+              <p class="org">Inkscape · Krita · Canva</p>
+              <div class="stack">
+                <span>Vector</span><span>Illustration</span><span>Layout</span><span>Type</span>
+              </div>
+            </div>
+            <div class="entry-notes">
+              <ul class="bul">
+                <li>Inkscape for vector work — logos, posters, and diagrams that need to scale.</li>
+                <li>Krita for illustration and texture painting, including game art.</li>
+                <li>Canva when something needs to be good and finished within the hour.</li>
+              </ul>
+            </div>
+          </article>
+
+          <div class="plates rv">
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Design 01</span>
+                <img src="assets/design/design-01.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Design 01</figcaption>
+            </figure>
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Design 02</span>
+                <img src="assets/design/design-02.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Design 02</figcaption>
+            </figure>
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Design 03</span>
+                <img src="assets/design/design-03.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Design 03</figcaption>
+            </figure>
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Design 04</span>
+                <img src="assets/design/design-04.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Design 04</figcaption>
+            </figure>
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Design 05</span>
+                <img src="assets/design/design-05.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Design 05</figcaption>
+            </figure>
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Design 06</span>
+                <img src="assets/design/design-06.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Design 06</figcaption>
+            </figure>
+          </div>
+
+          <article class="entry rv">
+            <div class="entry-when"><span class="label">3D</span></div>
+            <div class="entry-what">
+              <h3 class="h3">Blender</h3>
+              <p class="org">Modelling · Simulation · Rendering</p>
+              <div class="stack">
+                <span>Blender</span><span>Modelling</span><span>Materials</span><span>Physics</span>
+              </div>
+            </div>
+            <div class="entry-notes">
+              <ul class="bul">
+                <li>Hard-surface and prop modelling, with materials and lighting taken through to a final render.</li>
+                <li>Physics simulation work for short animated pieces.</li>
+              </ul>
+            </div>
+          </article>
+
+          <div class="plates rv">
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Render 01</span>
+                <img src="assets/render/render-01.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Render 01</figcaption>
+            </figure>
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Render 02</span>
+                <img src="assets/render/render-02.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Render 02</figcaption>
+            </figure>
+            <figure class="plate">
+              <div class="frame">
+                <span class="ph label">Render 03</span>
+                <img src="assets/render/render-03.jpg" alt="" loading="lazy" decoding="async">
+              </div>
+              <figcaption>Render 03</figcaption>
+            </figure>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 05 ACHIEVEMENTS ================= -->
+  <section id="achievements">
+    <div class="wrap">
+      <div class="grid sec-head rv">
+        <div class="col-label"><span class="label num">05</span></div>
         <div class="col-main"><h2 class="h2">Achievements</h2></div>
       </div>
 
@@ -633,7 +900,7 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
             <div class="ach-rank"><span class="label">Winner</span></div>
             <div class="ach-body">
               <h3 class="h3">GABA Hackday</h3>
-              <p class="org">The Deposition — an AI detective interrogation game, built with the Gemini API and Pixi.js.</p>
+              <p class="org">Won with The Deposition, an AI detective interrogation game.</p>
             </div>
             <div class="ach-year"><span class="label num">2026</span></div>
           </article>
@@ -670,12 +937,15 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
     </div>
   </section>
 
-  <!-- ================= 04 OPEN SOURCE ================= -->
+  <!-- ================= 06 OPEN SOURCE ================= -->
   <section id="open-source">
     <div class="wrap">
       <div class="grid sec-head rv">
-        <div class="col-label"><span class="label num">04</span></div>
-        <div class="col-main"><h2 class="h2">Open source</h2></div>
+        <div class="col-label"><span class="label num">06</span></div>
+        <div class="col-main">
+          <h2 class="h2">Open source</h2>
+          <p class="sec-lead">Nearly everything I build sits on top of someone else's open source, so I try to put work back into the tools I actually use.</p>
+        </div>
       </div>
 
       <div class="grid">
@@ -713,11 +983,11 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
     </div>
   </section>
 
-  <!-- ================= 05 SKILLS ================= -->
+  <!-- ================= 07 SKILLS ================= -->
   <section id="skills">
     <div class="wrap">
       <div class="grid sec-head rv">
-        <div class="col-label"><span class="label num">05</span></div>
+        <div class="col-label"><span class="label num">07</span></div>
         <div class="col-main"><h2 class="h2">Skills</h2></div>
       </div>
 
@@ -727,7 +997,7 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
           <dl class="skills rv" style="margin:0;">
             <div class="skillrow">
               <dt class="label">Languages</dt>
-              <dd>Python · C++ · TypeScript · JavaScript · Java · SQL · Bash</dd>
+              <dd>Python · C++ · TypeScript · JavaScript · Java · SQL · Bash · GDScript</dd>
             </div>
             <div class="skillrow">
               <dt class="label">Frontend</dt>
@@ -753,17 +1023,25 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
               <dt class="label">AI engineering</dt>
               <dd>AI SDK · RAG · vector databases (pgvector, ChromaDB) · LLM APIs (Gemini, OpenAI) · Ollama and local inference</dd>
             </div>
+            <div class="skillrow">
+              <dt class="label">Game dev</dt>
+              <dd>Godot · GDScript · GDShader · Aseprite · Pixi.js · game jams</dd>
+            </div>
+            <div class="skillrow">
+              <dt class="label">3D &amp; design</dt>
+              <dd>Blender (modelling, simulation, rendering) · Inkscape · Krita · Canva</dd>
+            </div>
           </dl>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ================= 06 EDUCATION ================= -->
+  <!-- ================= 08 EDUCATION ================= -->
   <section id="education">
     <div class="wrap">
       <div class="grid sec-head rv">
-        <div class="col-label"><span class="label num">06</span></div>
+        <div class="col-label"><span class="label num">08</span></div>
         <div class="col-main"><h2 class="h2">Education</h2></div>
       </div>
 
@@ -796,11 +1074,11 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
     </div>
   </section>
 
-  <!-- ================= 07 CONTACT ================= -->
+  <!-- ================= 09 CONTACT ================= -->
   <section id="contact">
     <div class="wrap">
       <div class="grid sec-head rv">
-        <div class="col-label"><span class="label num">07</span></div>
+        <div class="col-label"><span class="label num">09</span></div>
         <div class="col-main"><h2 class="h2">Get in touch</h2></div>
       </div>
 
@@ -809,6 +1087,7 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
         <div class="contact-links">
           <a class="btn" href="https://github.com/thebigby10" target="_blank" rel="noopener">GitHub</a>
           <a class="btn" href="https://linkedin.com/in/thebigby01" target="_blank" rel="noopener">LinkedIn</a>
+          <a class="btn" href="https://thebigby11.itch.io" target="_blank" rel="noopener">itch.io</a>
           <a class="btn btn-solid" href="Md_Abidur_Rahman_Resume.pdf" download>Download resume</a>
         </div>
       </div>
@@ -845,6 +1124,13 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
       if (t === "INPUT" || t === "TEXTAREA") return;
       toggleGrid();
     }
+  });
+
+  /* Empty image slots stay grey instead of showing a broken-image icon */
+  Array.prototype.forEach.call(document.querySelectorAll(".plate img"), function(img){
+    function drop(){ img.style.display = "none"; }
+    img.addEventListener("error", drop);
+    if (img.complete && img.naturalWidth === 0) drop();
   });
 
   /* Scroll reveal */
