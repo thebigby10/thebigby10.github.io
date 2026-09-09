@@ -140,6 +140,7 @@ a.modesw-b:hover{color:#fff;background:#221f31;}
           aria-label="Pixel-art side-scrolling view of the portfolio"></canvas>
 
   <div class="play-chrome">
+    <button type="button" class="pbtn" id="pb-snd" aria-pressed="false">Mute</button>
     <button type="button" class="pbtn" id="pb-map">Map</button>
     <button type="button" class="pbtn" id="pb-help">Keys</button>
     <div class="modesw" aria-label="Reading mode">
@@ -985,6 +986,119 @@ function drawPlayer(){
 }
 
 /* ---------------------------------------------------------------
+   9b. SOUND
+   Oscillators only. There is no audio file here either, for the
+   same reason there is no image file. The context is built on the
+   first key or tap, because a browser will not let a page make a
+   noise before it has been touched.
+   --------------------------------------------------------------- */
+function getPref(k, d){
+  try { var v = window.localStorage.getItem("arcade." + k); return v === null ? d : v; }
+  catch(e){ return d; }
+}
+function setPref(k, v){
+  try { window.localStorage.setItem("arcade." + k, String(v)); } catch(e){}
+}
+
+var actx = null, master = null, drone = null, droneGain = null, droneFilt = null;
+var muted = getPref("mute", "0") === "1";
+var btnSnd = doc.getElementById("pb-snd");
+
+/* name: [wave, from, to, seconds, volume] */
+var SFX = {
+  jump:  ["square",   220, 660, 0.12, 0.20],
+  hop:   ["square",   300, 700, 0.09, 0.16],
+  land:  ["triangle", 190,  80, 0.08, 0.18],
+  pick:  ["square",   660,1320, 0.16, 0.20],
+  card:  ["square",   440, 880, 0.06, 0.14],
+  close: ["square",   880, 440, 0.06, 0.12],
+  menu:  ["square",   520, 520, 0.04, 0.10],
+  ride:  ["square",   330, 550, 0.10, 0.16],
+  hit:   ["sawtooth", 300,  80, 0.14, 0.20],
+  die:   ["square",   400,  60, 0.45, 0.22],
+  point: ["square",   880,1180, 0.07, 0.16]
+};
+
+function ensureAudio(){
+  if (actx || muted) return;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try { actx = new AC(); } catch(e){ actx = null; return; }
+  master = actx.createGain();
+  master.gain.value = 0.5;
+  master.connect(actx.destination);
+}
+
+function sfx(name, vol){
+  if (muted) return;
+  ensureAudio();
+  if (!actx || !SFX[name]) return;
+  if (actx.state === "suspended") actx.resume();
+  var s = SFX[name], t = actx.currentTime;
+  var o = actx.createOscillator(), g = actx.createGain();
+  o.type = s[0];
+  o.frequency.setValueAtTime(s[1], t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, s[2]), t + s[3]);
+  g.gain.setValueAtTime(s[4] * (vol === undefined ? 1 : vol), t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + s[3]);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + s[3] + 0.02);
+}
+
+/* a short run of notes, for the flag and the last floppy */
+function fanfare(notes){
+  if (muted) return;
+  ensureAudio();
+  if (!actx) return;
+  if (actx.state === "suspended") actx.resume();
+  for (var i = 0; i < notes.length; i++){
+    var t = actx.currentTime + i * 0.11;
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = "square";
+    o.frequency.setValueAtTime(notes[i], t);
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.2);
+  }
+}
+
+/* the engine under the bike, the kart and the jetpack */
+function engine(speed, id){
+  if (muted || !actx) return;
+  var want = (id === "kart" || id === "bike" || id === "jet") ? Math.min(1, speed) : 0;
+  if (!drone){
+    drone = actx.createOscillator();
+    droneFilt = actx.createBiquadFilter();
+    droneGain = actx.createGain();
+    drone.type = "sawtooth";
+    droneFilt.type = "lowpass";
+    droneFilt.frequency.value = 900;
+    droneGain.gain.value = 0;
+    drone.connect(droneFilt); droneFilt.connect(droneGain); droneGain.connect(master);
+    drone.start();
+  }
+  var base = id === "jet" ? 90 : (id === "kart" ? 60 : 110);
+  var t = actx.currentTime;
+  drone.frequency.setTargetAtTime(base + want * (id === "jet" ? 130 : 90), t, 0.08);
+  droneGain.gain.setTargetAtTime(want * (id === "jet" ? 0.10 : 0.07), t, 0.08);
+}
+
+function setMuted(m){
+  muted = m;
+  setPref("mute", m ? "1" : "0");
+  if (m && droneGain && actx) droneGain.gain.setTargetAtTime(0, actx.currentTime, 0.05);
+  if (btnSnd){
+    btnSnd.textContent = m ? "Sound" : "Mute";
+    btnSnd.setAttribute("aria-pressed", m ? "true" : "false");
+  }
+}
+if (btnSnd){
+  setMuted(muted);
+  btnSnd.addEventListener("click", function(){ setMuted(!muted); if (!muted) sfx("menu"); cv.focus(); });
+}
+
+/* ---------------------------------------------------------------
    10. STATE AND INPUT
    --------------------------------------------------------------- */
 var now = 0, last = 0, raf = 0, running = false;
@@ -1013,7 +1127,8 @@ function setVehicle(i, quiet){
   P.veh = (i + VEHICLES.length) % VEHICLES.length;
   P.bounce = 0;
   ridesUsed[VEHICLES[P.veh].id] = true;
-  if (!quiet) say(VEHICLES[P.veh].name + " \u00b7 " + VEHICLES[P.veh].hint);
+  if (drone && droneGain && actx) droneGain.gain.setTargetAtTime(0, actx.currentTime, 0.03);
+  if (!quiet){ sfx("ride"); say(VEHICLES[P.veh].name + " \u00b7 " + VEHICLES[P.veh].hint); }
 }
 
 /* ---------------------------------------------------------------
@@ -1079,6 +1194,7 @@ function openStation(si){
   buildCard(si, 0);
   mode = "card";
   syncPad();
+  sfx("card");
 }
 
 function cardMove(d){
@@ -1121,6 +1237,7 @@ function step(dt){
   if (P.y < 26) { P.y = 26; P.vy = 0; }
 
   /* ledges catch you from above only, so nothing can trap you under one */
+  var wasAir = !P.onGround, impact = P.vy;
   var landed = false;
   if (P.vy >= 0){
     for (var pi = 0; pi < PLATFORMS.length; pi++){
@@ -1147,8 +1264,15 @@ function step(dt){
     P.onGround = false;
   }
 
+  if (P.onGround && wasAir && impact > 0.6)
+    sfx(v.bounce ? "hop" : "land", Math.min(1, impact / 3.2));
+  engine(Math.abs(P.vx) / Math.max(0.01, v.max), v.id);
+
   grabDisks();
-  if (!endShown && P.x > FLAG_X - 8){ endShown = true; mode = "end"; syncPad(); }
+  if (!endShown && P.x > FLAG_X - 8){
+    endShown = true; mode = "end"; syncPad();
+    fanfare([523, 659, 784, 1047]);
+  }
   if (konami && !reduceMotion && Math.abs(P.vx) > 0.2){
     trail.push({ x:P.x, y:P.y - 10, t:26 });
     if (trail.length > 70) trail.shift();
@@ -1423,22 +1547,23 @@ function press(k){
       else if (card.ci < card.sec.cards.length - 1) cardMove(1);
     }
     if (k === "up") card.page = Math.max(0, card.page - 1);
-    if (k === "b" || k === "back"){ mode = "world"; card = null; syncPad(); }
+    if (k === "b" || k === "back"){ mode = "world"; card = null; syncPad(); sfx("close"); }
     return;
   }
 
   if (mode === "map"){
-    if (k === "up")   mapSel = (mapSel + MAPROWS.length - 1) % MAPROWS.length;
-    if (k === "down") mapSel = (mapSel + 1) % MAPROWS.length;
+    if (k === "up")   { mapSel = (mapSel + MAPROWS.length - 1) % MAPROWS.length; sfx("menu"); }
+    if (k === "down") { mapSel = (mapSel + 1) % MAPROWS.length; sfx("menu"); }
     if (k === "a"){
       var row = MAPROWS[mapSel];
       P.x = row.x;
       P.y = terrain(P.x); P.vx = 0; P.vy = 0;
       camX = Math.max(0, Math.min(LEVEL - W, P.x - 108));
       mode = "world"; syncPad();
+      sfx("point");
       say("Arrived at " + row.name.toLowerCase());
     }
-    if (k === "b" || k === "back"){ mode = "world"; syncPad(); }
+    if (k === "b" || k === "back"){ mode = "world"; syncPad(); sfx("close"); }
     return;
   }
 
@@ -1479,9 +1604,12 @@ function press(k){
     var ns = nearStation();
     if (ns >= 0) { openStation(ns); return; }
     if (nearArcade()){ enterRoom(); return; }
-    if (nearFlag()){ mode = "end"; syncPad(); return; }
+    if (nearFlag()){ mode = "end"; syncPad(); fanfare([523, 659, 784, 1047]); return; }
     var v = VEHICLES[P.veh];
-    if (P.onGround && v.jump > 0) { P.vy = -v.jump; P.onGround = false; }
+    if (P.onGround && v.jump > 0) {
+      P.vy = -v.jump; P.onGround = false;
+      sfx(v.id === "bike" ? "hop" : "jump");
+    }
     return;
   }
   if (k === "up"){
@@ -1754,6 +1882,7 @@ function grabDisks(){
     if (Math.abs(d.x - P.x) < 11 && Math.abs(d.y - (P.y - 10)) < 14){
       d.got = true;
       var n = disksFound();
+      if (n === DISKS.length) fanfare([659, 784, 988, 1319]); else sfx("pick");
       say(n === DISKS.length ? "Every floppy found" : "Floppy  " + n + "/" + DISKS.length);
     }
   }
@@ -1921,6 +2050,7 @@ function endGame(g){
   g.newBest = g.score > 0 && g.score > bestOf(g.id);
   setBest(g.id, g.score);
   g.over = true;
+  if (g.newBest) fanfare([659, 784, 988, 1319]); else sfx("die");
 }
 
 function gameBar(g){
@@ -1982,7 +2112,7 @@ function Snake(){
     for (var i = 0; i < this.body.length - 1; i++)
       if (this.body[i].x === h.x && this.body[i].y === h.y){ this.die(); return; }
     this.body.unshift(h);
-    if (h.x === this.food.x && h.y === this.food.y){ this.score += 10; this.food = freeCell(); }
+    if (h.x === this.food.x && h.y === this.food.y){ this.score += 10; this.food = freeCell(); sfx("point"); }
     else this.body.pop();
   };
 
@@ -2119,6 +2249,7 @@ function Roids(){
   this.split = function(i, r){
     this.rocks.splice(i, 1);
     this.score += r.r > 10 ? 20 : (r.r > 6 ? 50 : 100);
+    sfx("hit");
     for (var k = 0; k < 8; k++)
       this.bits.push({ x:r.x, y:r.y, vx:(Math.random()-0.5)*2.4, vy:(Math.random()-0.5)*2.4, life:18 });
     if (r.r > 6){
@@ -2223,6 +2354,7 @@ function Brick(){
       if (b.x > k.x - 1 && b.x < k.x + BW - 1 && b.y > k.y - 1 && b.y < k.y + BH){
         k.alive = false;
         this.score += (ROWS - k.row) * 5;
+        sfx("point");
         var ox = Math.min(Math.abs(b.x - k.x), Math.abs(b.x - (k.x + BW)));
         var oy = Math.min(Math.abs(b.y - k.y), Math.abs(b.y - (k.y + BH)));
         if (oy < ox) b.vy = -b.vy; else b.vx = -b.vx;
@@ -2236,6 +2368,7 @@ function Brick(){
       this.stuck = true;
       b.vx *= 1.1; b.vy *= 1.1;
       this.score += 50;
+      sfx("point");
     }
   };
 
