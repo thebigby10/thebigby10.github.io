@@ -1336,6 +1336,7 @@ function buildCard(si, ci){
   if (!pages.length) pages.push([]);
 
   sec.seen = true;
+  markRead(sec.id);
   var sparse = !lines.length && !c.intro;
   card = {
     sparse:sparse,
@@ -1667,6 +1668,7 @@ function frame(ts){
 
   if (mode !== lastMode){
     if (lastMode && !reduceMotion) wipe = 9;
+    if (mode === "end") noteRun(now - runStart);
     lastMode = mode;
   }
   stepShake(dt);
@@ -2047,6 +2049,35 @@ function layoutExtras(){
   for (i = 0; i < SECTIONS.length; i++)
     MAPROWS.push({ no:SECTIONS[i].no, name:SECTIONS[i].name, x:STATIONS[i].x - 30, sec:SECTIONS[i] });
   MAPROWS.push({ no:"\u25b6", name:"The arcade", x:ARCADE_X - 26, sec:null });
+}
+
+/* ---- what carries over between visits ----
+   Deliberately records, not world state: coming back should not hand
+   you a level with the floppies already gone. What persists is what
+   you have read, your fastest run, and your best haul. */
+function readIds(){
+  var raw = getPref("read", "");
+  return raw ? raw.split(",") : [];
+}
+function markRead(id){
+  if (!id || id === "secret") return;
+  var have = readIds();
+  if (have.indexOf(id) >= 0) return;
+  have.push(id);
+  setPref("read", have.join(","));
+}
+function readCount(){
+  var have = readIds(), n = 0;
+  for (var i = 0; i < SECTIONS.length; i++)
+    if (have.indexOf(SECTIONS[i].id) >= 0) n++;
+  return n;
+}
+function bestTime(){ return parseInt(getPref("besttime", "0"), 10) || 0; }
+function noteRun(ms){
+  var b = bestTime();
+  if (!b || ms < b) setPref("besttime", Math.round(ms));
+  var d = parseInt(getPref("bestdisks", "0"), 10) || 0;
+  if (disksFound() > d) setPref("bestdisks", disksFound());
 }
 
 function disksFound(){
@@ -2754,8 +2785,9 @@ function drawEnd(){
   var full = seenCount() === SECTIONS.length;
   textCentre(full ? "You read the whole thing." : "You made it to the flag.", W / 2, 24, C.paper);
 
+  var bt = bestTime();
   var rows = [
-    ["time",     clock(now - runStart)],
+    ["time",     clock(now - runStart) + (bt ? "   best " + clock(bt) : "")],
     ["stops read", seenCount() + " of " + SECTIONS.length],
     ["floppies",  disksFound() + " of " + DISKS.length],
     ["rides used", ridesCount() + " of " + VEHICLES.length]

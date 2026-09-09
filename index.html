@@ -449,8 +449,12 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
 a.modesw-b:hover{background:var(--ink);color:var(--paper);}
 .modesw-b:hover{color:var(--ink);}
 .modesw-b.is-on{background:var(--ink);color:var(--paper);}
+.modesw-note{
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  color:var(--muted,#777);margin-left:10px;align-self:center;white-space:nowrap;
+}
 @media (max-width:1120px){ .modesw{margin-left:auto;} }
-.modesw + .gridbtn{margin-left:10px;}
+.modesw + .gridbtn, .modesw-note + .gridbtn{margin-left:10px;}
 @media (max-width:400px){ .modesw-b{padding:6px 8px;letter-spacing:.06em;} }
 
 </style>
@@ -1205,6 +1209,31 @@ a.modesw-b:hover{background:var(--ink);color:var(--paper);}
   }
 
   document.getElementById("year").textContent = new Date().getFullYear();
+
+  /* If arcade mode has been played, say how far it got. The arcade writes
+     these; this only reads them, and stays quiet if nothing is there. */
+  (function(){
+    var link = document.getElementById("mode-play");
+    if (!link) return;
+    var read, best;
+    try {
+      read = window.localStorage.getItem("arcade.read");
+      best = window.localStorage.getItem("arcade.besttime");
+    } catch(e){ return; }
+    var n = read ? read.split(",").length : 0;
+    var ms = parseInt(best, 10) || 0;
+    if (!n && !ms) return;
+    var bits = [];
+    if (n) bits.push(n + "/" + document.querySelectorAll("main section[id]").length + " read");
+    if (ms){
+      var sec = Math.round(ms / 1000);
+      bits.push(Math.floor(sec / 60) + ":" + ("0" + (sec % 60)).slice(-2));
+    }
+    var tag = document.createElement("span");
+    tag.className = "modesw-note";
+    tag.textContent = bits.join(" \u00b7 ");
+    link.parentNode.parentNode.insertBefore(tag, link.parentNode.nextSibling);
+  })();
 })();
 </script>
 </body>
