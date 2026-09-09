@@ -926,6 +926,66 @@ function drawStations(t){
   }
 }
 
+/* ---------------------------------------------------------------
+   8b. SOMEONE AT EVERY STOP
+   A figure beside each monument with a line to say. The line is the
+   stop's own lead paragraph out of index.html, trimmed to its first
+   sentence, so nobody here says anything the page does not.
+   --------------------------------------------------------------- */
+function barkFor(sec){
+  var t = String(sec.lead || "").trim();
+  if (!t) return "";
+  var cut = t.indexOf(". ");
+  if (cut > 8) t = t.slice(0, cut + 1);
+  if (t.length > 74) t = t.slice(0, 71) + "...";
+  return t;
+}
+
+function drawNPCs(){
+  for (var i = 0; i < STATIONS.length; i++){
+    var s = STATIONS[i];
+    if (s.secret) continue;
+    var bark = barkFor(s.sec);
+    if (!bark) continue;
+
+    var x = s.x - 36;
+    if (x - camX < -60 || x - camX > W + 60) continue;
+    var g = Math.round(terrain(x));
+    var near = Math.abs(P.x - x) < 46;
+    var bob = (reduceMotion || !near) ? 0 : Math.round(Math.sin(now / 260 + i) * 1);
+
+    /* a different build and palette to the rider, so it reads as someone else */
+    var y = g + bob;
+    wr(x - 3, y - 20, 6, 5, C.rust);           /* hair */
+    wr(x - 2, y - 16, 5, 4, C.mist);           /* face */
+    wr(x + 1, y - 15, 1, 1, C.ink);
+    wr(x - 3, y - 12, 6, 7, C.moss);           /* coat */
+    wr(x - 3, y - 11, 6, 1, C.cyan);
+    wr(x - 3, y - 5, 2, 5, C.slate);           /* legs */
+    wr(x + 1, y - 5, 2, 5, C.slate);
+
+    if (!near) continue;
+
+    var lines = wrap(bark, 26);
+    if (lines.length > 2){ lines = lines.slice(0, 2); lines[1] = lines[1].slice(0, 23) + "..."; }
+    var w = 0, j;
+    for (j = 0; j < lines.length; j++) w = Math.max(w, textWidth(lines[j]));
+    var bw = w + 10, bh = lines.length * LINE_H + 7;
+    var bx = Math.round(x - bw / 2 - camX), by = Math.round(y - 26 - bh - camY);
+    if (bx < 2) bx = 2;
+    if (bx + bw > W - 2) bx = W - 2 - bw;
+
+    sr(bx, by, bw, bh, C.ink);
+    sr(bx, by, bw, 1, C.slate);
+    sr(bx, by + bh - 1, bw, 1, C.slate);
+    sr(bx - 1, by + 1, 1, bh - 2, C.slate);
+    sr(bx + bw, by + 1, 1, bh - 2, C.slate);
+    sr(Math.round(x - camX) - 1, by + bh, 3, 3, C.ink);   /* tail */
+    for (j = 0; j < lines.length; j++)
+      text(lines[j], bx + 5, by + 4 + j * LINE_H, C.mist);
+  }
+}
+
 /* start and finish markers */
 function drawEnds(){
   var g0 = Math.round(terrain(40));
@@ -1623,6 +1683,7 @@ function frame(ts){
     var q = trail[tr];
     wr(q.x, q.y, 2, 2, [C.red, C.gold, C.moss, C.cyan, C.mist][tr % 5]);
   }
+  drawNPCs();
   drawParts();
   drawPlayer();
   drawHud();
