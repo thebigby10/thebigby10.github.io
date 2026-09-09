@@ -428,6 +428,31 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
   section{page-break-inside:avoid;}
   .plates{display:none;}
 }
+
+/* ============================================================
+   MODE SWITCH  (header, top right)
+   ============================================================ */
+.modesw{
+  display:flex;
+  margin-left:20px;
+  border:1px solid var(--ink);
+  align-self:center;
+}
+.modesw-b{
+  font:inherit;
+  font-size:var(--t-mono);letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  background:none;border:0;color:var(--mid);
+  padding:6px 10px;cursor:pointer;line-height:1;
+}
+.modesw-b{display:block;text-decoration:none;}
+.modesw-b + .modesw-b{border-left:1px solid var(--ink);}
+a.modesw-b:hover{background:var(--ink);color:var(--paper);}
+.modesw-b:hover{color:var(--ink);}
+.modesw-b.is-on{background:var(--ink);color:var(--paper);}
+@media (max-width:1120px){ .modesw{margin-left:auto;} }
+.modesw + .gridbtn{margin-left:10px;}
+@media (max-width:400px){ .modesw-b{padding:6px 8px;letter-spacing:.06em;} }
+
 </style>
 </head>
 <body>
@@ -454,6 +479,13 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
         <a href="#education">08 Education</a>
         <a href="#contact">09 Contact</a>
       </nav>
+
+      <!-- mode selector -->
+      <div class="modesw" aria-label="Reading mode">
+        <span class="modesw-b is-on" aria-current="page">Page</span>
+        <a class="modesw-b" id="mode-play" href="arcade.html">Arcade</a>
+      </div>
+
       <button class="gridbtn" id="gridbtn" type="button" aria-pressed="false">Grid</button>
     </div>
   </div>
@@ -1106,6 +1138,7 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
   </div>
 </footer>
 
+
 <script>
 (function(){
   "use strict";
@@ -1149,10 +1182,20 @@ footer{padding:22px 0 40px;border-top:1px solid var(--rule);}
   /* Mark the section currently in view in the index */
   var links = Array.prototype.slice.call(document.querySelectorAll("nav.idx a"));
   var sections = links.map(function(a){ return document.querySelector(a.getAttribute("href")); }).filter(Boolean);
+  var play = document.getElementById("mode-play");
+  var here = "";
+  function aimArcade(){
+    if (!play) return;
+    play.setAttribute("href", (window.scrollY < 120 || !here) ? "arcade.html" : "arcade.html#" + here);
+  }
+  window.addEventListener("scroll", aimArcade, { passive: true });
+
   if ("IntersectionObserver" in window && sections.length) {
     var spy = new IntersectionObserver(function(entries){
       entries.forEach(function(en){
         if (!en.isIntersecting) return;
+        here = en.target.id;
+        aimArcade();
         links.forEach(function(a){
           a.setAttribute("aria-current", a.getAttribute("href") === "#" + en.target.id ? "true" : "false");
         });
