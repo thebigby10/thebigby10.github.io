@@ -560,9 +560,23 @@ var camX = 0, camY = 0;
 /* ---------------------------------------------------------------
    6. DRAW HELPERS
    --------------------------------------------------------------- */
+/* Screen shake. Every world pixel goes through wr(), so folding the
+   offset in here is the whole feature - nothing else has to know. */
+var shakeMag = 0, shakeX = 0, shakeY = 0;
+function shake(m){
+  if (reduceMotion) return;
+  shakeMag = Math.min(5, Math.max(shakeMag, m));
+}
+function stepShake(dt){
+  if (shakeMag <= 0.05){ shakeMag = 0; shakeX = 0; shakeY = 0; return; }
+  shakeX = (Math.random() * 2 - 1) * shakeMag;
+  shakeY = (Math.random() * 2 - 1) * shakeMag;
+  shakeMag *= Math.pow(0.82, dt);
+}
+
 function wr(x, y, w, h, col){
   ctx.fillStyle = col;
-  ctx.fillRect(Math.round(x - camX), Math.round(y - camY), w, h);
+  ctx.fillRect(Math.round(x - camX + shakeX), Math.round(y - camY + shakeY), w, h);
 }
 function sr(x, y, w, h, col){ ctx.fillStyle = col; ctx.fillRect(x | 0, y | 0, w, h); }
 
@@ -1264,13 +1278,18 @@ function step(dt){
     P.onGround = false;
   }
 
-  if (P.onGround && wasAir && impact > 0.6)
+  if (P.onGround && wasAir && impact > 0.6){
     sfx(v.bounce ? "hop" : "land", Math.min(1, impact / 3.2));
+    if (impact > 2.2) shake(Math.min(3, (impact - 2.2) * 1.6));
+  }
+  /* the kart rattles once it is really moving */
+  if (v.id === "kart" && Math.abs(P.vx) > v.max * 0.88 && P.onGround) shake(0.5);
   engine(Math.abs(P.vx) / Math.max(0.01, v.max), v.id);
 
   grabDisks();
   if (!endShown && P.x > FLAG_X - 8){
     endShown = true; mode = "end"; syncPad();
+    shake(2.5);
     fanfare([523, 659, 784, 1047]);
   }
   if (konami && !reduceMotion && Math.abs(P.vx) > 0.2){
@@ -1479,6 +1498,7 @@ function frame(ts){
   var dt = Math.min(3, (ts - last) / 16.6667) || 1;
   last = ts;
 
+  stepShake(dt);
   if (mode === "world"){
     step(dt);
     var nn = nearStation() >= 0;
