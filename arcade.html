@@ -560,6 +560,30 @@ var camX = 0, camY = 0;
 /* ---------------------------------------------------------------
    6. DRAW HELPERS
    --------------------------------------------------------------- */
+/* Transitions. Rather than touching every mode = "..." site, the loop
+   notices the mode changed and runs a short blind-wipe over the top.
+   bootT gives the intro a CRT coming on. */
+var wipe = 0, lastMode = "", bootT = 0;
+function drawWipe(dt){
+  if (wipe <= 0) return;
+  wipe -= dt;
+  var band = Math.ceil(Math.max(0, wipe / 9) * 8);
+  if (band <= 0) return;
+  for (var y = 0; y < H; y += 8) sr(0, y, W, band, C.black);
+}
+function drawBoot(dt){
+  if (bootT <= 0) return;
+  bootT -= dt;
+  var t = Math.max(0, bootT / 26);
+  var h = Math.round((1 - t) * (H / 2));
+  sr(0, 0, W, H / 2 - h, C.black);
+  sr(0, H / 2 + h, W, H / 2 - h + 1, C.black);
+  if (h < H / 2){
+    sr(0, H / 2 - h - 1, W, 1, C.paper);
+    sr(0, H / 2 + h, W, 1, C.paper);
+  }
+}
+
 /* Particles. One flat array, world coordinates, drawn through wr() so
    they shake and scroll with everything else. Capped, because a pixel
    at a time is cheap but not free. */
@@ -1537,6 +1561,10 @@ function frame(ts){
   var dt = Math.min(3, (ts - last) / 16.6667) || 1;
   last = ts;
 
+  if (mode !== lastMode){
+    if (lastMode && !reduceMotion) wipe = 9;
+    lastMode = mode;
+  }
   stepShake(dt);
   stepParts(dt);
   if (mode === "world"){
@@ -1586,6 +1614,9 @@ function frame(ts){
     drawIntro();
     if (now > introUntil) { mode = "world"; hintUntil = now + 7000; }
   }
+
+  drawWipe(dt);
+  drawBoot(dt);
 
   /* a soft vignette keeps the little screen feeling like a screen */
   ctx.fillStyle = "rgba(10,9,16,.16)";
@@ -2547,6 +2578,7 @@ function start(){
   if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches && padEl) padEl.classList.add("on");
 
   runStart = performance.now();
+  bootT = reduceMotion ? 0 : 26;
   endShown = false;
   trail = [];
   ridesUsed = {};
