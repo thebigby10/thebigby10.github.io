@@ -1504,9 +1504,30 @@ function drawMap(){
     if (r.sec && r.sec.seen) text("\u2713", W - 18, y, C.moss);
     if (!r.sec) text(disksFound() + "/" + DISKS.length, W - 34, y, C.cyan);
   }
+  var want = ridesWanted();
+  if (want) textCentre(want, W / 2, H - 27, C.gold);
+
   sr(3, H - 15, W - 6, 12, C.shadow);
   text("\u25b2 \u25bc choose", 7, H - 14, C.haze);
   textRight("Space go  \u00b7  Esc back", W - 7, H - 14, C.haze);
+}
+
+/* which rides the floppies still out there are asking for */
+function ridesWanted(){
+  var need = {}, any = false, i, d;
+  for (i = 0; i < DISKS.length; i++){
+    d = DISKS[i];
+    if (d.got || !d.ride) continue;
+    need[d.ride] = (need[d.ride] || 0) + 1;
+    any = true;
+  }
+  if (!any) return "";
+  var parts = [];
+  for (i = 0; i < VEHICLES.length; i++){
+    var v = VEHICLES[i];
+    if (need[v.id]) parts.push(v.name.toLowerCase() + " " + need[v.id]);
+  }
+  return "still up there: " + parts.join(", ");
 }
 
 function drawHelp(){
@@ -1911,12 +1932,17 @@ function layoutExtras(){
     { x:4460, y: 84, w: 38 }, { x:4520, y: 58, w: 26 }
   ];
 
-  /* twelve floppies: a few in plain sight, most needing the right ride */
+  /* Twelve floppies. Three of them hang over open ground at heights
+     no amount of walking will reach, so the ride you pick matters.
+     A floppy is caught anywhere along the arc, not just at the apex,
+     and the terrain bulges up to y=116 between stops, so the cutoffs
+     are taken from the worst case: on foot you can touch y>69, on the
+     pogo y>58, and the jetpack reaches the y=26 ceiling. */
   DISKS = [
     { x:  58, y: 0 },  { x: 706, y: 86 }, { x: 766, y: 64 },
-    { x:1180, y: 0 },  { x:1500, y: 78 }, { x:2352, y: 40 },
-    { x:2900, y: 34 }, { x:3052, y: 82 }, { x:3874, y: 58 },
-    { x:4200, y: 0 },  { x:4532, y: 48 }, { x:LEVEL - 66, y: 0 }
+    { x:1180, y: 66, ride:"pogo" },       { x:1500, y: 78 }, { x:2352, y: 40 },
+    { x:2900, y: 44, ride:"jet" },        { x:3052, y: 82 }, { x:3874, y: 58 },
+    { x:4200, y: 66, ride:"pogo" },       { x:4532, y: 48 }, { x:LEVEL - 66, y: 0 }
   ];
   for (var i = 0; i < DISKS.length; i++){
     if (!DISKS[i].y) DISKS[i].y = terrain(DISKS[i].x) - 10;
