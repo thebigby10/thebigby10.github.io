@@ -729,6 +729,28 @@ function drawHills(t){
 }
 
 /* a low skyline of workplaces behind the mid hills */
+/* A band of weather across the middle of the run. Stars and the moon
+   were already up there in drawSky; this is the part that was not. */
+function rainAmount(t){
+  if (reduceMotion) return 0;
+  if (t <= 0.30 || t >= 0.58) return 0;
+  return Math.min(1, (t - 0.30) / 0.07, (0.58 - t) / 0.07);
+}
+function drawRain(t){
+  var r = rainAmount(t);
+  if (r <= 0) return;
+  ctx.fillStyle = "rgba(27,42,68,.20)";
+  ctx.fillRect(0, 0, W, H);
+  var n = Math.round(85 * r), i;
+  for (i = 0; i < n; i++){
+    var sp = 3.4 + rnd(i + 11) * 2.6;
+    var x = (rnd(i) * (W + 140) - camX * 0.8 - now * 0.035) % (W + 40);
+    if (x < 0) x += W + 40;
+    var y = (rnd(i + 40) * (H + 70) + now * sp * 0.055) % (H + 30);
+    sr(x - 20, y - 16, 1, 3, mix(C.sky, C.mist, rnd(i + 70)));
+  }
+}
+
 function drawSkyline(t){
   var col = mix(C.ink, C.shadow, 0.5);
   var lit = mix(C.gold, C.paper, 0.2 - t * 0.2);
@@ -1686,6 +1708,7 @@ function frame(ts){
   drawNPCs();
   drawParts();
   drawPlayer();
+  drawRain(Math.min(1, P.x / LEVEL));
   drawHud();
 
   if (mode === "card") drawCard();
