@@ -140,6 +140,7 @@ a.modesw-b:hover{color:#fff;background:#221f31;}
           aria-label="Pixel-art side-scrolling view of the portfolio"></canvas>
 
   <div class="play-chrome">
+    <button type="button" class="pbtn" id="pb-save" hidden>Save run</button>
     <button type="button" class="pbtn" id="pb-snd" aria-pressed="false">Mute</button>
     <button type="button" class="pbtn" id="pb-map">Map</button>
     <button type="button" class="pbtn" id="pb-help">Keys</button>
@@ -1820,6 +1821,7 @@ function press(k){
 }
 
 function syncPad(){
+  if (btnSave) btnSave.hidden = (mode !== "end");
   if (!padA) return;
   if (btnMap) btnMap.textContent = (mode === "room" || mode === "game" || mode === "end") ? "Back" : "Map";
   if (mode === "room"){ padA.textContent = room.door ? "Out" : (room.sel >= 0 ? "Play" : "\u2014"); padB.textContent = "Out"; }
@@ -1877,6 +1879,10 @@ function onKeyDown(e){
   if (k === "Shift" || k === "v" || k === "V"){ if (!e.repeat) press("b"); e.preventDefault(); return; }
   if (k === "Escape"){
     if (mode === "world") goPage(); else press("back");
+    e.preventDefault(); return;
+  }
+  if (k === "s" || k === "S"){
+    if (mode === "end") saveShot();
     e.preventDefault(); return;
   }
   if (k === "m" || k === "M"){
@@ -2770,8 +2776,40 @@ function drawEnd(){
   textCentre("Stop 09 has his address on it.", W / 2, 131, C.haze);
   sr(3, H - 15, W - 6, 12, C.shadow);
   text("Space  stay", 7, H - 14, C.haze);
+  textCentre("S  save", W / 2, H - 14, C.haze);
   textRight("Esc  the page", W - 7, H - 14, C.haze);
 }
+
+/* ---------------------------------------------------------------
+   16f. TAKING THE RUN WITH YOU
+   The end screen was a dead end. The canvas already is the picture,
+   so the receipt is just that canvas blown up with the pixels kept
+   square.
+   --------------------------------------------------------------- */
+var btnSave = doc.getElementById("pb-save");
+
+function saveShot(){
+  if (!cv.toBlob) return;
+  var oc = doc.createElement("canvas");
+  oc.width = W * 4; oc.height = H * 4;
+  var octx = oc.getContext("2d");
+  octx.imageSmoothingEnabled = false;
+  octx.mozImageSmoothingEnabled = false;
+  octx.drawImage(cv, 0, 0, oc.width, oc.height);
+  oc.toBlob(function(b){
+    if (!b) return;
+    var u = URL.createObjectURL(b);
+    var a = doc.createElement("a");
+    a.href = u;
+    a.download = "arcade-run-" + clock(now - runStart).replace(":", "m") + "s.png";
+    doc.body.appendChild(a);
+    a.click();
+    doc.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+  });
+  sfx("point");
+}
+if (btnSave) btnSave.addEventListener("click", function(){ saveShot(); cv.focus(); });
 
 /* ---------------------------------------------------------------
    17. STARTING, AND GOING BACK TO THE PAGE
