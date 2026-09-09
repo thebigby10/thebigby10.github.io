@@ -1,0 +1,1615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arcade — Md. Abidur Rahman</title>
+<meta name="description" content="A side-scrolling pixel version of Md. Abidur Rahman's portfolio. The same nine sections, walked, cycled, bounced, driven or flown through.">
+<meta name="robots" content="noindex">
+<link rel="canonical" href="index.html">
+<meta name="theme-color" content="#0a0910">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111'/><text y='74' x='50' text-anchor='middle' font-family='Helvetica,Arial' font-size='64' font-weight='700' fill='%23fff'>A</text></svg>">
+
+<style>
+:root{
+  --f-sans:"Helvetica Neue",Helvetica,Arial,"Liberation Sans","Nimbus Sans",sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;overflow:hidden;background:#0a0910;}
+html{-webkit-text-size-adjust:100%;}
+a{color:inherit;text-decoration:none;}
+
+/* the mode switch, in the dark */
+.modesw{display:flex;border:2px solid #35314a;}
+.modesw-b{
+  display:block;font:inherit;
+  font-family:var(--f-sans);
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  background:rgba(12,11,18,.72);color:#b9b5cd;border:0;
+  padding:8px 11px;line-height:1;cursor:pointer;
+}
+.modesw-b + .modesw-b{border-left:2px solid #35314a;}
+a.modesw-b:hover{color:#fff;background:#221f31;}
+.modesw-b.is-on{background:#e0b56a;color:#14121e;}
+
+/* loading and failure states */
+.play-note{
+  position:absolute;inset:0;z-index:6;
+  display:flex;align-items:center;justify-content:center;
+  padding:32px;text-align:center;
+  font-family:var(--f-sans);
+  background:#0a0910;
+}
+#play-fail{display:none;}
+.play-note h1{
+  font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  color:#e0b56a;margin:0 0 14px;
+}
+.play-note p{
+  font-size:15px;line-height:1.5;color:#b9b5cd;
+  margin:0 auto 20px;max-width:36em;
+}
+.play-note a{
+  display:inline-block;border:2px solid #35314a;
+  padding:10px 13px;line-height:1;
+  font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  color:#e8e6f2;
+}
+.play-note a:hover{border-color:#e0b56a;color:#fff;}
+
+@media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important;} }
+
+/* ============================================================
+   ARCADE MODE
+   ============================================================ */
+#play{
+  position:fixed;inset:0;z-index:1;
+  display:block;
+  background:#0a0910;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:8px 8px,8px 8px;
+  color:#e8e6f2;
+  font-family:var(--f-sans);
+  touch-action:none;
+  user-select:none;-webkit-user-select:none;
+}
+
+#screen{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  image-rendering:pixelated;
+  image-rendering:crisp-edges;
+  background:#000;
+  box-shadow:0 0 0 2px #1d1b28,0 0 0 5px #0a0910,0 18px 60px rgba(0,0,0,.7);
+  display:block;
+}
+
+/* chrome buttons pinned to the viewport, not the pixel canvas */
+.play-chrome{
+  position:absolute;top:14px;right:14px;
+  display:flex;gap:8px;z-index:3;
+}
+.pbtn{
+  font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  background:rgba(12,11,18,.72);color:#b9b5cd;
+  border:2px solid #35314a;
+  padding:8px 11px;line-height:1;cursor:pointer;
+}
+.pbtn:hover{color:#fff;border-color:#7d76a6;}
+.pbtn:active{transform:translateY(1px);}
+#play :focus-visible{outline:2px solid #e0b56a;outline-offset:2px;}
+
+/* touch pad */
+.pad{
+  position:absolute;bottom:0;left:0;right:0;
+  display:none;
+  justify-content:space-between;align-items:flex-end;
+  padding:0 14px 16px;
+  z-index:3;pointer-events:none;
+}
+.pad.on{display:flex;}
+.pad-l,.pad-r{display:flex;gap:10px;pointer-events:auto;}
+.pad button{
+  font:inherit;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+  width:58px;height:58px;
+  background:rgba(20,18,30,.8);color:#cfcbe0;
+  border:2px solid #3d3856;
+  cursor:pointer;line-height:1.1;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;
+}
+.pad button.hot{background:#e0b56a;color:#14121e;border-color:#e0b56a;}
+.pad .arrow{font-size:20px;letter-spacing:0;}
+@media (max-width:900px){ .pad-l,.pad-r{gap:8px;} .pad button{width:52px;height:52px;} }
+
+.play-sr{
+  position:absolute;width:1px;height:1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;
+}
+</style>
+</head>
+<body>
+
+<!-- ================= ARCADE MODE ================= -->
+<div id="play">
+  <p class="play-sr">Arcade mode is a decorative side-scrolling view of this page. Every word in it also appears in the standard page. Press Escape to go back.</p>
+
+  <canvas id="screen" width="240" height="160" tabindex="0" role="img"
+          aria-label="Pixel-art side-scrolling view of the portfolio"></canvas>
+
+  <div class="play-chrome">
+    <button type="button" class="pbtn" id="pb-map">Map</button>
+    <button type="button" class="pbtn" id="pb-help">Keys</button>
+    <div class="modesw" aria-label="Reading mode">
+      <a class="modesw-b" id="pb-exit" href="index.html">Page</a>
+      <span class="modesw-b is-on" aria-current="page">Arcade</span>
+    </div>
+  </div>
+
+  <div class="play-note" id="play-load">
+    <div>
+      <h1>Loading</h1>
+      <p>Fetching the words from the standard page.</p>
+    </div>
+  </div>
+
+  <div class="play-note" id="play-fail">
+    <div>
+      <h1>Cannot read the page</h1>
+      <p data-why></p>
+      <a href="index.html">Go to the standard page</a>
+    </div>
+  </div>
+
+  <div class="pad" id="pad">
+    <div class="pad-l">
+      <button type="button" class="arrow" data-k="left" aria-label="Move left">&#9664;</button>
+      <button type="button" class="arrow" data-k="right" aria-label="Move right">&#9654;</button>
+    </div>
+    <div class="pad-r">
+      <button type="button" data-k="b" id="pad-b">Ride</button>
+      <button type="button" data-k="a" id="pad-a">Jump</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   ARCADE MODE
+   A 240x160 side-scrolling reader for the same content as the page.
+   Everything below is drawn from code: no image files, no libraries.
+   ================================================================ */
+(function(){
+"use strict";
+
+var doc = document;
+var src = null;                     /* the standard page, fetched and parsed */
+var cv = doc.getElementById("screen");
+if (!cv) return;
+var ctx = cv.getContext("2d", { alpha:false });
+ctx.imageSmoothingEnabled = false;
+
+var W = 240, H = 160;
+var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------------------------------------------------------------
+   1. PALETTE
+   Sixteen colours. Ink and paper are borrowed from the page so the
+   two modes read as the same site; the rest is a dusk-to-night run.
+   --------------------------------------------------------------- */
+var C = {
+  black:"#0a0910", ink:"#16141f", shadow:"#221f31", slate:"#37324a",
+  grey:"#5b5474",  haze:"#8b84a6", mist:"#bfb9d4",  paper:"#f4f2fa",
+  night:"#1b2a44", deep:"#2d4a6b", sky:"#4b7fa6",   cyan:"#8fcfdd",
+  gold:"#e0b56a",  rust:"#b9713c", red:"#d1544f",   moss:"#5f9d63"
+};
+
+/* ---------------------------------------------------------------
+   2. FONT  — 5x8 cell, 7px caps, real descenders.
+   "offset|rows" where each row is five bits, top row first.
+   --------------------------------------------------------------- */
+var GLYPHS = {
+"A":"0|01110 10001 10001 11111 10001 10001 10001",
+"B":"0|11110 10001 10001 11110 10001 10001 11110",
+"C":"0|01110 10001 10000 10000 10000 10001 01110",
+"D":"0|11100 10010 10001 10001 10001 10010 11100",
+"E":"0|11111 10000 10000 11110 10000 10000 11111",
+"F":"0|11111 10000 10000 11110 10000 10000 10000",
+"G":"0|01110 10001 10000 10111 10001 10001 01111",
+"H":"0|10001 10001 10001 11111 10001 10001 10001",
+"I":"0|01110 00100 00100 00100 00100 00100 01110",
+"J":"0|00111 00010 00010 00010 00010 10010 01100",
+"K":"0|10001 10010 10100 11000 10100 10010 10001",
+"L":"0|10000 10000 10000 10000 10000 10000 11111",
+"M":"0|10001 11011 10101 10101 10001 10001 10001",
+"N":"0|10001 11001 11001 10101 10011 10011 10001",
+"O":"0|01110 10001 10001 10001 10001 10001 01110",
+"P":"0|11110 10001 10001 11110 10000 10000 10000",
+"Q":"0|01110 10001 10001 10001 10101 10010 01101",
+"R":"0|11110 10001 10001 11110 10100 10010 10001",
+"S":"0|01111 10000 10000 01110 00001 00001 11110",
+"T":"0|11111 00100 00100 00100 00100 00100 00100",
+"U":"0|10001 10001 10001 10001 10001 10001 01110",
+"V":"0|10001 10001 10001 10001 10001 01010 00100",
+"W":"0|10001 10001 10001 10101 10101 10101 01010",
+"X":"0|10001 10001 01010 00100 01010 10001 10001",
+"Y":"0|10001 10001 01010 00100 00100 00100 00100",
+"Z":"0|11111 00001 00010 00100 01000 10000 11111",
+
+"a":"2|01110 00001 01111 10001 01111",
+"b":"0|10000 10000 11110 10001 10001 10001 11110",
+"c":"2|01110 10001 10000 10001 01110",
+"d":"0|00001 00001 01111 10001 10001 10001 01111",
+"e":"2|01110 10001 11111 10000 01110",
+"f":"0|00110 01001 01000 11100 01000 01000 01000",
+"g":"2|01111 10001 10001 01111 00001 01110",
+"h":"0|10000 10000 11110 10001 10001 10001 10001",
+"i":"0|00100 00000 01100 00100 00100 00100 01110",
+"j":"0|00010 00000 00110 00010 00010 00010 10010 01100",
+"k":"0|10000 10000 10010 10100 11000 10100 10010",
+"l":"0|01100 00100 00100 00100 00100 00100 01110",
+"m":"2|11010 10101 10101 10101 10101",
+"n":"2|11110 10001 10001 10001 10001",
+"o":"2|01110 10001 10001 10001 01110",
+"p":"2|11110 10001 10001 11110 10000 10000",
+"q":"2|01111 10001 10001 01111 00001 00001",
+"r":"2|10110 11001 10000 10000 10000",
+"s":"2|01111 10000 01110 00001 11110",
+"t":"0|01000 01000 11100 01000 01000 01001 00110",
+"u":"2|10001 10001 10001 10011 01101",
+"v":"2|10001 10001 10001 01010 00100",
+"w":"2|10001 10101 10101 10101 01010",
+"x":"2|10001 01010 00100 01010 10001",
+"y":"2|10001 10001 10001 01111 00001 01110",
+"z":"2|11111 00010 00100 01000 11111",
+
+"0":"0|01110 10001 10011 10101 11001 10001 01110",
+"1":"0|00100 01100 00100 00100 00100 00100 01110",
+"2":"0|01110 10001 00001 00010 00100 01000 11111",
+"3":"0|11111 00010 00100 00010 00001 10001 01110",
+"4":"0|00010 00110 01010 10010 11111 00010 00010",
+"5":"0|11111 10000 11110 00001 00001 10001 01110",
+"6":"0|00110 01000 10000 11110 10001 10001 01110",
+"7":"0|11111 00001 00010 00100 01000 01000 01000",
+"8":"0|01110 10001 10001 01110 10001 10001 01110",
+"9":"0|01110 10001 10001 01111 00001 00010 01100",
+
+".":"5|01100 01100",
+",":"5|00110 00110 01100",
+":":"2|01100 01100 00000 01100 01100",
+";":"2|00110 00110 00000 00110 01100",
+"!":"0|00100 00100 00100 00100 00100 00000 00100",
+"?":"0|01110 10001 00001 00010 00100 00000 00100",
+"'":"0|00110 00110 01100",
+"\"":"0|01010 01010 01010",
+"-":"3|11111",
+"+":"1|00100 00100 11111 00100 00100",
+"=":"2|11111 00000 00000 11111",
+"*":"1|00100 10101 01110 10101 00100",
+"/":"0|00001 00010 00010 00100 01000 01000 10000",
+"\\":"0|10000 01000 01000 00100 00010 00010 00001",
+"(":"0|00010 00100 01000 01000 01000 00100 00010",
+")":"0|01000 00100 00010 00010 00010 00100 01000",
+"[":"0|01110 01000 01000 01000 01000 01000 01110",
+"]":"0|01110 00010 00010 00010 00010 00010 01110",
+"&":"0|01100 10010 10010 01100 10101 10010 01101",
+"@":"0|01110 10001 10111 10101 10111 10000 01110",
+"#":"0|01010 01010 11111 01010 11111 01010 01010",
+"%":"0|11001 11010 00010 00100 01000 01011 10011",
+"_":"6|11111",
+"|":"0|00100 00100 00100 00100 00100 00100 00100",
+"<":"0|00010 00100 01000 10000 01000 00100 00010",
+">":"0|01000 00100 00010 00001 00010 00100 01000",
+"~":"3|01001 10110",
+"\u00b7":"3|01100 01100",
+"\u00b0":"0|01100 10010 01100",
+"\u2022":"2|01110 11111 11111 01110",
+"\u25b6":"0|10000 11000 11100 11110 11100 11000 10000",
+"\u25c0":"0|00001 00011 00111 01111 00111 00011 00001",
+"\u25bc":"3|11111 01110 00100",
+"\u25b2":"3|00100 01110 11111",
+"\u2713":"1|00001 00010 10100 01000 00000"
+};
+
+var CELL_W = 6, CELL_H = 8, LINE_H = 9;
+var order = [], parsed = {};
+(function parseFont(){
+  for (var ch in GLYPHS){
+    if (!Object.prototype.hasOwnProperty.call(GLYPHS,ch)) continue;
+    var bits = GLYPHS[ch].split("|");
+    parsed[ch] = { o:parseInt(bits[0],10), rows:bits[1].split(" ") };
+    order.push(ch);
+  }
+})();
+
+/* Characters the font does not carry get folded onto ones it does. */
+var FOLD = {
+  "\u2018":"'", "\u2019":"'", "\u201c":"\"", "\u201d":"\"",
+  "\u2013":"-", "\u2014":"-", "\u2212":"-", "\u00a0":" ",
+  "\u2192":"\u25b6", "\u2026":"...", "\u00d7":"x", "\u20b9":"Rs"
+};
+function fold(s){
+  s = String(s == null ? "" : s);
+  var out = "", i, ch;
+  for (i = 0; i < s.length; i++){
+    ch = s.charAt(i);
+    if (FOLD[ch] !== undefined) { out += FOLD[ch]; continue; }
+    out += (parsed[ch] || ch === " ") ? ch : "?";
+  }
+  return out;
+}
+
+/* One atlas canvas per colour, built the first time that colour is used. */
+var atlases = {};
+function atlas(color){
+  if (atlases[color]) return atlases[color];
+  var a = doc.createElement("canvas");
+  a.width = order.length * CELL_W;
+  a.height = CELL_H;
+  var g = a.getContext("2d");
+  g.fillStyle = color;
+  for (var i = 0; i < order.length; i++){
+    var gl = parsed[order[i]], ox = i * CELL_W;
+    for (var r = 0; r < gl.rows.length; r++){
+      var row = gl.rows[r], y = gl.o + r;
+      if (y >= CELL_H) continue;
+      for (var c = 0; c < row.length; c++){
+        if (row.charAt(c) === "1") g.fillRect(ox + c, y, 1, 1);
+      }
+    }
+  }
+  var rec = { cv:a, idx:{} };
+  for (var k = 0; k < order.length; k++) rec.idx[order[k]] = k * CELL_W;
+  atlases[color] = rec;
+  return rec;
+}
+
+function textWidth(s){ return fold(s).length * CELL_W; }
+
+function text(s, x, y, color){
+  var a = atlas(color || C.paper);
+  s = fold(s);
+  var px = x | 0;
+  for (var i = 0; i < s.length; i++){
+    var ch = s.charAt(i);
+    if (ch !== " "){
+      var sx = a.idx[ch];
+      if (sx === undefined) sx = a.idx["?"];
+      if (sx !== undefined) ctx.drawImage(a.cv, sx, 0, CELL_W, CELL_H, px, y | 0, CELL_W, CELL_H);
+    }
+    px += CELL_W;
+  }
+  return px;
+}
+
+function textRight(s, x, y, color){ return text(s, x - textWidth(s), y, color); }
+function textCentre(s, cx, y, color){ return text(s, Math.round(cx - textWidth(s) / 2), y, color); }
+
+/* Greedy word wrap, measured in characters because the font is fixed width. */
+function wrap(s, cols){
+  s = fold(s);
+  var words = s.split(/\s+/), lines = [], line = "";
+  for (var i = 0; i < words.length; i++){
+    var w = words[i];
+    if (!w) continue;
+    while (w.length > cols){
+      if (line) { lines.push(line); line = ""; }
+      lines.push(w.slice(0, cols));
+      w = w.slice(cols);
+    }
+    if (!line) line = w;
+    else if (line.length + 1 + w.length <= cols) line += " " + w;
+    else { lines.push(line); line = w; }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/* ---------------------------------------------------------------
+   3. CONTENT
+   Read straight out of the page so the two modes can never drift
+   apart. Edit the HTML and arcade mode updates with it.
+   --------------------------------------------------------------- */
+var SECTION_IDS = ["experience","projects","games","design","achievements","open-source","skills","education","contact"];
+
+function txt(el){ return el ? el.textContent.replace(/\s+/g," ").trim() : ""; }
+
+function harvestCards(sec){
+  var cards = [], i, j;
+
+  var nodes = sec.querySelectorAll(".entry, .project, .ach, .edu, .skillrow");
+  for (i = 0; i < nodes.length; i++){
+    var n = nodes[i], card = { title:"", meta:"", when:"", body:[], tags:[], links:[] };
+
+    card.title = txt(n.querySelector(".h3"));
+    card.meta  = txt(n.querySelector(".org")) || txt(n.querySelector(".p-kind"));
+    if (n.querySelector(".p-kind") && n.querySelector(".org")) card.meta = txt(n.querySelector(".org"));
+    card.when  = txt(n.querySelector(".entry-when .label")) ||
+                 txt(n.querySelector(".ach-rank .label")) ||
+                 txt(n.querySelector(".edu-when .label")) ||
+                 txt(n.querySelector(".ach-year .label"));
+
+    var flag = n.querySelector(".p-flag");
+    if (flag) card.when = txt(flag);
+
+    /* skills rows are a term/definition pair, not a titled entry */
+    if (n.classList.contains("skillrow")){
+      card.title = txt(n.querySelector("dt"));
+      card.meta = "";
+      card.when = "";
+      card.body.push(txt(n.querySelector("dd")));
+    }
+
+    var kind = n.querySelector(".p-kind");
+    if (kind && card.meta !== txt(kind)) card.body.unshift(txt(kind));
+
+    var lis = n.querySelectorAll("ul.bul li");
+    for (j = 0; j < lis.length; j++) card.body.push(txt(lis[j]));
+
+    var year = n.querySelector(".ach-year .label");
+    if (year && !card.when) card.when = txt(year);
+    if (year && card.when && card.when !== txt(year)) card.meta = txt(year) + (card.meta ? "  " + card.meta : "");
+
+    var tags = n.querySelectorAll(".stack span");
+    for (j = 0; j < tags.length; j++) card.tags.push(txt(tags[j]));
+
+    var as = n.querySelectorAll("a[href]");
+    for (j = 0; j < as.length; j++){
+      var href = as[j].getAttribute("href");
+      if (!href || href.charAt(0) === "#") continue;
+      card.links.push({ label: txt(as[j]).replace(/\s*\u25b6\s*$/,"").replace(/\s*→\s*$/,""), href: as[j].href });
+    }
+
+    if (card.title || card.body.length) cards.push(card);
+  }
+
+  /* contact has no entries; build one card from the links */
+  if (!cards.length){
+    var c2 = { title:txt(sec.querySelector(".h2")), meta:"", when:"", body:[], tags:[], links:[] };
+    var big = sec.querySelector(".contact-big");
+    if (big) c2.body.push(txt(big));
+    var la = sec.querySelectorAll("a[href]");
+    for (i = 0; i < la.length; i++){
+      var h = la[i].getAttribute("href");
+      if (!h || h.charAt(0) === "#") continue;
+      c2.links.push({ label:txt(la[i]), href:la[i].href });
+    }
+    cards.push(c2);
+  }
+  return cards;
+}
+
+var SECTIONS = [];
+function harvest(){
+  SECTIONS.length = 0;
+  for (var i = 0; i < SECTION_IDS.length; i++){
+    var sec = src.getElementById(SECTION_IDS[i]);
+    if (!sec) continue;
+    var lead = txt(sec.querySelector(".sec-lead"));
+    var cards = harvestCards(sec);
+    if (lead) cards.unshift({ intro:true, title:"", meta:"", when:"", body:[lead], tags:[], links:[] });
+    SECTIONS.push({
+      id: SECTION_IDS[i],
+      no: ("0" + (SECTIONS.length + 1)).slice(-2),
+      name: txt(sec.querySelector(".h2")),
+      lead: lead,
+      cards: cards,
+      seen: false
+    });
+  }
+}
+
+/* ---------------------------------------------------------------
+   4. WORLD
+   --------------------------------------------------------------- */
+var SPACING = 560, FIRST = 420, GROUND = 126;
+var LEVEL = FIRST + SPACING * 8 + 340;
+var STATIONS = [];
+
+function layout(){
+  LEVEL = FIRST + SPACING * (SECTIONS.length - 1) + 340;
+  STATIONS = SECTIONS.map(function(s, i){
+    return { sec:s, x: FIRST + i * SPACING };
+  });
+}
+
+/* deterministic noise so scenery never flickers between frames */
+function rnd(i){
+  var x = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function nearestStationDist(x){
+  var d = 1e9;
+  for (var i = 0; i < STATIONS.length; i++) d = Math.min(d, Math.abs(x - STATIONS[i].x));
+  return d;
+}
+
+function terrain(x){
+  if (x < 0) x = 0;
+  if (x > LEVEL) x = LEVEL;
+  var wave = Math.sin(x * 0.0037) * 7 + Math.sin(x * 0.0111 + 1.3) * 3;
+  var f = Math.min(1, Math.max(0, (nearestStationDist(x) - 58) / 70));
+  return GROUND - wave * f;
+}
+
+/* ---------------------------------------------------------------
+   5. VEHICLES
+   --------------------------------------------------------------- */
+var VEHICLES = [
+  { id:"foot", name:"On foot",  hint:"Space to jump",        accel:0.30, max:1.15, fric:0.72, jump:3.30, grav:0.24, fly:false },
+  { id:"bike", name:"Bicycle",  hint:"Space to hop",         accel:0.09, max:2.30, fric:0.975,jump:2.60, grav:0.24, fly:false },
+  { id:"pogo", name:"Pogo",     hint:"Bounces on its own",   accel:0.14, max:1.55, fric:0.94, jump:0,    grav:0.20, fly:false, bounce:3.70 },
+  { id:"kart", name:"Kart",     hint:"Fast, no jump",        accel:0.11, max:3.40, fric:0.988,jump:1.40, grav:0.30, fly:false },
+  { id:"jet",  name:"Jetpack",  hint:"Hold space to climb",  accel:0.13, max:2.50, fric:0.955,jump:0,    grav:0.13, fly:true, thrust:0.34 }
+];
+
+var P = {
+  x: FIRST, y: GROUND, vx:0, vy:0,
+  face: 1, onGround:true, veh:0, anim:0, bounce:0
+};
+
+var camX = 0, camY = 0;
+
+/* ---------------------------------------------------------------
+   6. DRAW HELPERS
+   --------------------------------------------------------------- */
+function wr(x, y, w, h, col){
+  ctx.fillStyle = col;
+  ctx.fillRect(Math.round(x - camX), Math.round(y - camY), w, h);
+}
+function sr(x, y, w, h, col){ ctx.fillStyle = col; ctx.fillRect(x | 0, y | 0, w, h); }
+
+function hex(h){ return [parseInt(h.substr(1,2),16), parseInt(h.substr(3,2),16), parseInt(h.substr(5,2),16)]; }
+function mix(a, b, t){
+  var A = hex(a), B = hex(b), o = "#", i, v;
+  for (i = 0; i < 3; i++){
+    v = Math.round(A[i] + (B[i] - A[i]) * t);
+    o += ("0" + v.toString(16)).slice(-2);
+  }
+  return o;
+}
+
+function wheel(cx, cy, r, col, rim, spin){
+  for (var dy = -r; dy <= r; dy++){
+    var dx = Math.floor(Math.sqrt(Math.max(0, r*r - dy*dy)));
+    wr(cx - dx, cy + dy, dx * 2 + 1, 1, col);
+  }
+  if (rim){
+    var a = spin, ox = Math.round(Math.cos(a) * (r - 2)), oy = Math.round(Math.sin(a) * (r - 2));
+    wr(cx + ox, cy + oy, 1, 1, rim);
+    wr(cx - ox, cy - oy, 1, 1, rim);
+  }
+}
+
+/* ---------------------------------------------------------------
+   7. SKY, PARALLAX, GROUND
+   --------------------------------------------------------------- */
+function skyPair(t){
+  var top, bot;
+  if (t < 0.5){ var u = t / 0.5; top = mix(C.sky, C.deep, u); bot = mix(C.cyan, C.gold, u); }
+  else { var v = (t - 0.5) / 0.5; top = mix(C.deep, C.night, v); bot = mix(C.gold, C.slate, v); }
+  return [top, bot];
+}
+
+function drawSky(t){
+  var pair = skyPair(t), bands = 10, i;
+  for (i = 0; i < bands; i++){
+    sr(0, Math.round(i * H / bands), W, Math.ceil(H / bands) + 1, mix(pair[0], pair[1], i / (bands - 1)));
+  }
+  /* stars once the run turns towards night */
+  if (t > 0.52){
+    var a = Math.min(1, (t - 0.52) / 0.3);
+    for (i = 0; i < 40; i++){
+      var sx = (rnd(i) * (LEVEL + 400) - camX * 0.12) % (W + 40);
+      if (sx < 0) sx += W + 40;
+      var sy = 4 + rnd(i + 90) * 70;
+      var tw = reduceMotion ? 1 : (0.6 + 0.4 * Math.sin(now / 400 + i));
+      if (a * tw > 0.45) sr(sx - 20, sy, 1, 1, mix(C.haze, C.paper, a * tw));
+    }
+  }
+  /* sun or moon, parked low over the horizon */
+  var hx = ((196 - camX * 0.03) % 320 + 320) % 320 - 40;
+  var hy = 34;
+  var disc = t < 0.5 ? mix(C.paper, C.gold, t * 2) : mix(C.gold, C.mist, (t - 0.5) * 2);
+  for (var dy = -8; dy <= 8; dy++){
+    var dx = Math.floor(Math.sqrt(Math.max(0, 64 - dy*dy)));
+    sr(hx - dx, hy + dy, dx * 2 + 1, 1, disc);
+  }
+}
+
+function drawClouds(t){
+  var drift = reduceMotion ? 0 : now * 0.004;
+  for (var i = 0; i < 14; i++){
+    var base = rnd(i) * (LEVEL + 600);
+    var cx = base - camX * 0.14 - drift;
+    cx = ((cx % (LEVEL + 600)) + LEVEL + 600) % (LEVEL + 600);
+    if (cx < -60 || cx > W + 20) continue;
+    var cy = 12 + rnd(i + 5) * 40 - camY * 0.14;
+    var w = 16 + Math.floor(rnd(i + 11) * 20);
+    var col = mix(C.paper, C.mist, 0.25 + t * 0.5);
+    sr(cx, cy, w, 3, col);
+    sr(cx + 4, cy - 3, w - 10, 3, col);
+    sr(cx + 2, cy + 3, w - 4, 2, mix(col, C.slate, 0.25));
+  }
+}
+
+function drawHills(t){
+  var farCol = mix(mix(skyPair(t)[1], C.slate, 0.62), C.ink, 0.14);
+  var midCol = mix(farCol, C.ink, 0.45);
+  var sx, wx, y;
+  for (sx = 0; sx < W; sx++){
+    wx = camX * 0.28 + sx;
+    y = 92 - Math.sin(wx * 0.006) * 12 - Math.sin(wx * 0.017 + 2) * 5 - camY * 0.28;
+    sr(sx, y, 1, H - y, farCol);
+  }
+  for (sx = 0; sx < W; sx++){
+    wx = camX * 0.52 + sx;
+    y = 104 - Math.sin(wx * 0.009 + 1.1) * 9 - Math.sin(wx * 0.023) * 4 - camY * 0.5;
+    sr(sx, y, 1, H - y, midCol);
+  }
+}
+
+/* a low skyline of workplaces behind the mid hills */
+function drawSkyline(t){
+  var col = mix(C.ink, C.shadow, 0.5);
+  var lit = mix(C.gold, C.paper, 0.2 - t * 0.2);
+  for (var i = 0; i < 60; i++){
+    var bx = i * 90 + rnd(i) * 40 - camX * 0.52;
+    if (bx < -60 || bx > W + 10) continue;
+    var bw = 18 + Math.floor(rnd(i + 3) * 22);
+    var bh = 22 + Math.floor(rnd(i + 7) * 34);
+    var by = 116 - bh - camY * 0.5;
+    sr(bx, by, bw, bh + 20, col);
+    for (var wy = by + 4; wy < by + bh - 3; wy += 6){
+      for (var wx2 = bx + 3; wx2 < bx + bw - 3; wx2 += 5){
+        var on = rnd(wx2 * 3 + wy) > (0.72 - t * 0.35);
+        sr(wx2, wy, 2, 3, on ? lit : mix(col, C.black, 0.4));
+      }
+    }
+  }
+}
+
+function drawGround(t){
+  var grass = mix(C.moss, C.slate, 0.25 + t * 0.5);
+  var lip   = mix(grass, C.black, 0.45);
+  var soil  = mix(C.rust, C.ink, 0.45 + t * 0.2);
+  var soil2 = mix(soil, C.black, 0.45);
+  var deep  = mix(C.ink, C.black, 0.55);
+  for (var sx = 0; sx < W; sx++){
+    var wx = camX + sx, gy = Math.round(terrain(wx) - camY);
+    sr(sx, gy, 1, 2, grass);
+    sr(sx, gy + 2, 1, 1, lip);
+    sr(sx, gy + 3, 1, 6, soil);
+    sr(sx, gy + 9, 1, 5, soil2);
+    sr(sx, gy + 14, 1, H - gy - 14, deep);
+    var k = (wx * 7919) & 31;
+    if (k < 3) sr(sx, gy + 4 + k, 1, 1, mix(soil, C.grey, 0.45));
+    if (k > 27) sr(sx, gy + 12 + (k & 5), 1, 2, mix(soil2, C.grey, 0.25));
+  }
+}
+
+/* fence posts, tufts and lamps along the path */
+function drawProps(t){
+  for (var i = 0; i < 220; i++){
+    var x = i * 41 + rnd(i) * 30;
+    if (x - camX < -20 || x - camX > W + 20) continue;
+    if (nearestStationDist(x) < 62) continue;
+    var g = terrain(x), kind = Math.floor(rnd(i + 21) * 3);
+    if (kind === 0){
+      wr(x, g - 5, 1, 5, mix(C.moss, C.ink, 0.3 + t * 0.4));
+      wr(x - 2, g - 6, 5, 1, mix(C.moss, C.ink, 0.2 + t * 0.4));
+    } else if (kind === 1){
+      wr(x, g - 9, 2, 9, mix(C.rust, C.ink, 0.35));
+      wr(x - 2, g - 11, 6, 2, mix(C.rust, C.ink, 0.15));
+    } else {
+      wr(x, g - 18, 2, 18, C.slate);
+      wr(x - 2, g - 21, 6, 4, C.grey);
+      wr(x - 1, g - 20, 4, 2, t > 0.4 ? C.gold : mix(C.gold, C.paper, 0.6));
+    }
+  }
+}
+
+/* ---------------------------------------------------------------
+   8. STATION MONUMENTS  — one silhouette per section
+   --------------------------------------------------------------- */
+function monument(id, x, g, near){
+  var body = C.slate, dark = C.ink, trim = C.mist, hot = near ? C.gold : C.haze;
+  switch(id){
+    case "experience":               /* an office block, lights on */
+      wr(x - 16, g - 44, 32, 44, body);
+      wr(x - 16, g - 46, 32, 3, dark);
+      for (var wy = g - 40; wy < g - 6; wy += 7)
+        for (var wx = x - 12; wx < x + 10; wx += 7)
+          wr(wx, wy, 4, 4, rnd(wx * wy) > 0.4 ? C.gold : dark);
+      wr(x - 5, g - 10, 10, 10, dark);
+      break;
+
+    case "projects":                 /* a server rack, one LED alive */
+      wr(x - 14, g - 40, 28, 40, dark);
+      for (var ry = g - 37; ry < g - 3; ry += 6){
+        wr(x - 11, ry, 22, 4, body);
+        wr(x + 7, ry + 1, 2, 2, (Math.floor(now / 300 + ry) % 3) ? C.moss : C.red);
+      }
+      wr(x - 16, g - 43, 32, 4, body);
+      break;
+
+    case "games":                    /* an arcade cabinet */
+      wr(x - 13, g - 42, 26, 42, body);
+      wr(x - 13, g - 44, 26, 4, C.red);
+      wr(x - 10, g - 38, 20, 14, C.night);
+      wr(x - 8, g - 34, 4, 4, C.cyan);
+      wr(x + 2, g - 30, 4, 4, C.gold);
+      wr(x - 10, g - 20, 20, 5, dark);
+      wr(x - 6, g - 19, 3, 3, C.red);
+      wr(x + 3, g - 19, 3, 3, C.moss);
+      break;
+
+    case "design":                   /* an easel with a wet canvas */
+      wr(x - 14, g - 34, 28, 24, C.paper);
+      wr(x - 14, g - 36, 28, 3, C.rust);
+      wr(x - 10, g - 30, 9, 9, C.red);
+      wr(x + 1, g - 26, 10, 5, C.cyan);
+      wr(x - 8, g - 18, 16, 4, C.gold);
+      wr(x - 8, g - 10, 3, 10, C.rust);
+      wr(x + 5, g - 10, 3, 10, C.rust);
+      break;
+
+    case "achievements":             /* a podium and a cup */
+      wr(x - 18, g - 10, 12, 10, body);
+      wr(x - 5, g - 16, 12, 16, trim);
+      wr(x + 8, g - 7, 11, 7, body);
+      wr(x - 4, g - 30, 10, 9, C.gold);
+      wr(x - 7, g - 28, 3, 4, C.gold);
+      wr(x + 5, g - 28, 3, 4, C.gold);
+      wr(x - 2, g - 21, 6, 3, C.gold);
+      wr(x - 5, g - 18, 12, 2, C.rust);
+      break;
+
+    case "open-source":              /* a tree shaped like a branch graph */
+      wr(x - 2, g - 26, 4, 26, C.rust);
+      wr(x - 12, g - 34, 24, 10, C.moss);
+      wr(x - 8, g - 40, 16, 8, C.moss);
+      wr(x - 14, g - 30, 6, 5, C.moss);
+      wr(x + 8, g - 30, 6, 5, C.moss);
+      wr(x - 10, g - 22, 8, 2, C.rust);
+      wr(x + 2, g - 17, 8, 2, C.rust);
+      break;
+
+    case "skills":                   /* a workbench with tools on a board */
+      wr(x - 18, g - 12, 36, 4, C.rust);
+      wr(x - 16, g - 8, 3, 8, C.rust);
+      wr(x + 13, g - 8, 3, 8, C.rust);
+      wr(x - 16, g - 38, 32, 26, body);
+      wr(x - 12, g - 34, 3, 12, trim);
+      wr(x - 6, g - 34, 7, 7, C.gold);
+      wr(x - 4, g - 27, 3, 6, trim);
+      wr(x + 4, g - 33, 9, 3, C.cyan);
+      wr(x + 6, g - 26, 5, 5, C.red);
+      break;
+
+    case "education":                /* a small school with a bell */
+      wr(x - 17, g - 26, 34, 26, body);
+      for (var ex = x - 13; ex < x + 11; ex += 9) wr(ex, g - 22, 6, 7, C.cyan);
+      wr(x - 4, g - 12, 8, 12, C.rust);
+      for (var t2 = 0; t2 < 10; t2++) wr(x - 17 - 2 + t2 * 2, g - 28 - t2, 38 - t2 * 4 + 4, 2, dark);
+      wr(x - 2, g - 42, 4, 6, C.gold);
+      break;
+
+    default:                         /* contact: a booth with an aerial */
+      wr(x - 11, g - 32, 22, 32, C.red);
+      wr(x - 8, g - 28, 16, 16, C.night);
+      wr(x - 8, g - 28, 16, 3, C.cyan);
+      wr(x - 13, g - 35, 26, 4, C.rust);
+      wr(x - 1, g - 46, 2, 12, C.slate);
+      wr(x - 5, g - 50, 10, 2, C.slate);
+      wr(x - 1, g - 53, 2, 3, near ? C.gold : C.grey);
+      break;
+  }
+
+  /* the marker post: number, name, and a nudge when you are close */
+  wr(x + 20, g - 26, 2, 26, C.grey);
+  wr(x + 14, g - 34, 22, 10, hot);
+  return hot;
+}
+
+function drawStations(t){
+  for (var i = 0; i < STATIONS.length; i++){
+    var s = STATIONS[i], x = s.x;
+    if (x - camX < -70 || x - camX > W + 70) continue;
+    var g = Math.round(terrain(x));
+    var near = Math.abs(P.x - x) < 42;
+    var hot = monument(s.sec.id, x, g, near);
+
+    /* plaque number sits on the post, name floats above the monument */
+    text(s.sec.no, Math.round(x + 19 - camX), Math.round(g - 32 - camY), C.ink);
+    var nm = s.sec.name.toUpperCase();
+    var nx = Math.round(x - textWidth(nm) / 2 - camX);
+    var ny = Math.round(g - 60 - camY);
+    sr(nx - 3, ny - 2, textWidth(nm) + 6, 11, near ? C.ink : mix(C.ink, C.black, 0.4));
+    text(nm, nx, ny, near ? C.gold : C.haze);
+    if (s.sec.seen) text("\u2713", nx + textWidth(nm) + 4, ny, C.moss);
+
+    if (near){
+      var bob = reduceMotion ? 0 : Math.round(Math.sin(now / 220) * 1.5);
+      text("\u25bc", Math.round(x - 3 - camX), Math.round(g - 50 - camY + bob), C.gold);
+    }
+  }
+}
+
+/* start and finish markers */
+function drawEnds(){
+  var g0 = Math.round(terrain(40));
+  wr(40, g0 - 30, 2, 30, C.grey);
+  wr(42, g0 - 30, textWidth("START") + 6, 12, C.paper);
+  text("START", 45 - camX, g0 - 27 - camY, C.ink);
+  var gl = Math.round(terrain(LEVEL - 120));
+  for (var i = 0; i < 6; i++)
+    for (var j = 0; j < 3; j++)
+      wr(LEVEL - 126 + i * 4, gl - 40 + j * 4, 4, 4, ((i + j) & 1) ? C.paper : C.ink);
+  wr(LEVEL - 128, gl - 40, 2, 40, C.grey);
+}
+
+/* ---------------------------------------------------------------
+   9. THE RIDER
+   --------------------------------------------------------------- */
+function drawRider(x, y, f, walkT, moving){
+  var swing = moving ? Math.sin(walkT) * 3 : 0;
+  wr(x - 3, y - 21, 7, 3, C.gold);            /* cap */
+  wr(x - 3 + f * 2, y - 20, 3, 1, C.gold);    /* brim */
+  wr(x - 2, y - 18, 5, 4, C.mist);            /* face */
+  wr(x + (f > 0 ? 1 : -1), y - 17, 1, 1, C.ink);
+  wr(x - 3, y - 14, 7, 7, C.deep);            /* jacket */
+  wr(x - 3, y - 13, 7, 1, C.sky);
+  wr(x + (f > 0 ? 3 : -4), y - 13, 1, 5, C.deep);
+  return swing;
+}
+
+function drawPlayer(){
+  var v = VEHICLES[P.veh], x = Math.round(P.x - camX), y = Math.round(P.y - camY), f = P.face;
+  var moving = Math.abs(P.vx) > 0.15;
+  var walkT = P.anim;
+
+  ctx.save();
+  /* soft contact shadow */
+  ctx.fillStyle = "rgba(10,9,16,.35)";
+  var sh = P.onGround ? 9 : 6;
+  ctx.fillRect(x - sh / 2, Math.round(terrain(P.x) - camY) - 1, sh, 2);
+
+  if (v.id === "foot"){
+    var bob = moving && !reduceMotion ? Math.round(Math.sin(walkT * 2) * 0.6) : 0;
+    var yy = y + bob;
+    sr(x - 3, yy - 21, 7, 3, C.gold);
+    sr(x - 3 + (f > 0 ? 4 : -2), yy - 20, 3, 1, C.gold);
+    sr(x - 2, yy - 18, 5, 4, C.mist);
+    sr(x + (f > 0 ? 1 : -2), yy - 17, 1, 1, C.ink);
+    sr(x - 3, yy - 14, 7, 7, C.deep);
+    sr(x - 3, yy - 13, 7, 1, C.sky);
+    var sw = moving ? Math.sin(walkT) * 2.5 : 0;
+    sr(x - 3 + (f > 0 ? 6 : -2), yy - 13 + (sw | 0), 2, 5, C.mist);      /* arm */
+    if (P.onGround){
+      sr(x - 3 + Math.round(2 + sw), yy - 7, 2, 7, C.ink);
+      sr(x - 3 + Math.round(2 - sw), yy - 7, 2, 7, C.shadow);
+    } else {
+      sr(x - 2, yy - 7, 2, 6, C.ink);
+      sr(x + 1, yy - 7, 2, 5, C.shadow);
+    }
+  }
+
+  else if (v.id === "bike"){
+    var spin = P.anim * 1.4;
+    wheel(x - 6, y - 4, 4, C.ink, C.mist, spin);
+    wheel(x + 6, y - 4, 4, C.ink, C.mist, spin);
+    sr(x - 6, y - 9, 12, 2, C.red);
+    sr(x - 1, y - 13, 2, 5, C.red);
+    sr(x + 5, y - 12, 2, 8, C.red);
+    sr(x + 4, y - 14, 5, 2, C.slate);
+    sr(x - 3, y - 21, 7, 3, C.gold);
+    sr(x - 2, y - 18, 5, 4, C.mist);
+    sr(x + (f > 0 ? 1 : -2), y - 17, 1, 1, C.ink);
+    sr(x - 3, y - 14, 7, 6, C.deep);
+    sr(x + 2, y - 13, 5, 2, C.mist);
+    sr(x - 2, y - 9, 3, 4, C.ink);
+  }
+
+  else if (v.id === "pogo"){
+    var sq = Math.max(0, Math.min(6, P.bounce));
+    var stick = 10 - sq;
+    sr(x - 1, y - stick, 2, stick, C.slate);
+    sr(x - 4, y - 2, 8, 2, C.rust);
+    sr(x - 5, y - stick - 4, 10, 3, C.slate);
+    var yy = y - stick - 4;
+    sr(x - 3, yy - 18, 7, 3, C.gold);
+    sr(x - 2, yy - 15, 5, 4, C.mist);
+    sr(x + (f > 0 ? 1 : -2), yy - 14, 1, 1, C.ink);
+    sr(x - 3, yy - 11, 7, 7, C.moss);
+    sr(x - 4, yy - 10, 2, 5, C.mist);
+    sr(x + 3, yy - 10, 2, 5, C.mist);
+    sr(x - 2, yy - 4, 2, 4, C.ink);
+    sr(x + 1, yy - 4, 2, 4, C.ink);
+  }
+
+  else if (v.id === "kart"){
+    var sp2 = P.anim * 2.2;
+    wheel(x - 8, y - 3, 3, C.ink, C.grey, sp2);
+    wheel(x + 8, y - 3, 3, C.ink, C.grey, sp2);
+    sr(x - 12, y - 9, 24, 5, C.red);
+    sr(x - 12, y - 10, 24, 1, C.gold);
+    sr(x + (f > 0 ? 8 : -12), y - 12, 4, 3, C.mist);   /* nose cone */
+    sr(x - 6, y - 14, 9, 5, C.rust);
+    sr(x - 3, y - 20, 7, 3, C.gold);
+    sr(x - 2, y - 17, 5, 4, C.mist);
+    sr(x + (f > 0 ? 1 : -2), y - 16, 1, 1, C.ink);
+    sr(x - 4, y - 13, 3, 3, C.slate);
+    if (Math.abs(P.vx) > 2 && !reduceMotion){
+      var pf = Math.round(rnd(Math.floor(now / 60)) * 3);
+      sr(x - 14 - pf, y - 6, 3, 2, C.haze);
+      sr(x - 18 - pf, y - 5, 2, 2, C.mist);
+    }
+  }
+
+  else {  /* jetpack */
+    var lift = keys.up || keys.a;
+    sr(x - 6, y - 18, 4, 9, C.slate);          /* tank */
+    sr(x - 6, y - 19, 4, 1, C.red);
+    sr(x - 3, y - 21, 7, 3, C.gold);
+    sr(x - 2, y - 18, 5, 4, C.mist);
+    sr(x + (f > 0 ? 1 : -2), y - 17, 1, 1, C.ink);
+    sr(x - 3, y - 14, 7, 7, C.deep);
+    sr(x - 3, y - 13, 7, 1, C.cyan);
+    sr(x - 2, y - 7, 2, 5, C.ink);
+    sr(x + 1, y - 7, 2, 5, C.shadow);
+    if (lift){
+      var fl = reduceMotion ? 3 : 3 + Math.round(rnd(Math.floor(now / 50)) * 4);
+      sr(x - 6, y - 9, 4, fl, C.gold);
+      sr(x - 5, y - 9 + fl, 2, 2, C.red);
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------------------------------------------------------------
+   10. STATE AND INPUT
+   --------------------------------------------------------------- */
+var now = 0, last = 0, raf = 0, running = false;
+var mode = "intro";                 /* intro | world | card | map | help */
+var introUntil = 0, hintUntil = 0;
+var keys = { left:false, right:false, up:false, down:false, a:false, b:false };
+var card = null, mapSel = 0, savedScroll = 0, lastNear = false;
+var toast = "", toastUntil = 0;
+
+var padEl   = doc.getElementById("pad");
+var padA    = doc.getElementById("pad-a");
+var padB    = doc.getElementById("pad-b");
+var btnMap  = doc.getElementById("pb-map");
+var btnHelp = doc.getElementById("pb-help");
+var btnExit = doc.getElementById("pb-exit");
+
+function say(msg){ toast = msg; toastUntil = now + 1600; }
+
+function nearStation(){
+  for (var i = 0; i < STATIONS.length; i++)
+    if (Math.abs(P.x - STATIONS[i].x) < 42) return i;
+  return -1;
+}
+
+function setVehicle(i, quiet){
+  P.veh = (i + VEHICLES.length) % VEHICLES.length;
+  P.bounce = 0;
+  if (!quiet) say(VEHICLES[P.veh].name + " \u00b7 " + VEHICLES[P.veh].hint);
+}
+
+/* ---------------------------------------------------------------
+   11. CARD BUILDING
+   --------------------------------------------------------------- */
+var COLS = 37, BODY_X = 8;
+
+function buildCard(si, ci){
+  var sec = STATIONS[si].sec;
+  ci = Math.max(0, Math.min(sec.cards.length - 1, ci));
+  var c = sec.cards[ci], lines = [], i, j, w;
+
+  function push(s, col, ind){ lines.push({ s:s, col:col, ind:ind || 0 }); }
+
+  for (i = 0; i < c.body.length; i++){
+    if (c.intro){                       /* a section opener reads as a paragraph */
+      w = wrap(c.body[i], COLS);
+      for (j = 0; j < w.length; j++) push(w[j], C.mist);
+    } else {
+      w = wrap(c.body[i], COLS - 2);
+      for (j = 0; j < w.length; j++) push((j ? "  " : "- ") + w[j], C.mist);
+    }
+  }
+  if (c.tags.length){
+    push("", C.mist);
+    w = wrap("Built with: " + c.tags.join(", "), COLS);
+    for (j = 0; j < w.length; j++) push(w[j], C.cyan);
+  }
+  if (c.links.length){
+    push("", C.mist);
+    for (i = 0; i < c.links.length && i < 4; i++){
+      push("[" + (i + 1) + "] " + c.links[i].label, C.gold);
+      lines[lines.length - 1].link = i;
+    }
+  }
+
+  var titleLines = c.intro ? [] : wrap(c.title || sec.name, COLS);
+  var metaLine = [c.when, c.meta].filter(Boolean).join("  \u00b7  ");
+  var metaLines = [];
+  if (metaLine){
+    var mw = wrap(metaLine, COLS);
+    metaLines = mw.slice(0, 2);
+    if (mw.length > 2) metaLines[1] = metaLines[1].slice(0, COLS - 3) + "...";
+  }
+  var top = 20 + titleLines.length * LINE_H + (metaLines.length ? metaLines.length * LINE_H + 3 : 2);
+  var perPage = Math.max(4, Math.floor((138 - top) / LINE_H));
+
+  var pages = [];
+  for (i = 0; i < lines.length; i += perPage) pages.push(lines.slice(i, i + perPage));
+  if (!pages.length) pages.push([]);
+
+  sec.seen = true;
+  var sparse = !lines.length && !c.intro;
+  card = {
+    sparse:sparse,
+    si:si, ci:ci, sec:sec, c:c, page:0, pages:pages,
+    titleLines:titleLines, metaLines:metaLines, top:top, hits:[]
+  };
+}
+
+function openStation(si){
+  if (si < 0) return;
+  buildCard(si, 0);
+  mode = "card";
+  syncPad();
+}
+
+function cardMove(d){
+  var n = card.ci + d;
+  if (n < 0 || n >= card.sec.cards.length) return;
+  buildCard(card.si, n);
+}
+
+function openLink(i){
+  if (!card || !card.c.links[i]) return;
+  var href = card.c.links[i].href;
+  if (href.indexOf("mailto:") === 0) window.location.href = href;
+  else window.open(href, "_blank", "noopener");
+}
+
+/* ---------------------------------------------------------------
+   12. UPDATE
+   --------------------------------------------------------------- */
+function step(dt){
+  var v = VEHICLES[P.veh];
+  var dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+
+  if (dir){ P.vx += dir * v.accel * dt; P.face = dir; }
+  else P.vx *= Math.pow(v.fric, dt);
+  if (P.vx >  v.max) P.vx =  v.max;
+  if (P.vx < -v.max) P.vx = -v.max;
+  if (Math.abs(P.vx) < 0.02) P.vx = 0;
+
+  if (v.fly && keys.a) P.vy -= v.thrust * dt;
+  P.vy += v.grav * dt;
+  if (P.vy >  4) P.vy = 4;
+  if (P.vy < -3) P.vy = -3;
+
+  P.x += P.vx * dt;
+  P.y += P.vy * dt;
+
+  if (P.x < 24) { P.x = 24; P.vx = 0; }
+  if (P.x > LEVEL - 40) { P.x = LEVEL - 40; P.vx = 0; }
+  if (P.y < 26) { P.y = 26; P.vy = 0; }
+
+  var g = terrain(P.x);
+  if (P.y >= g){
+    P.y = g;
+    P.onGround = true;
+    if (v.bounce && !keys.down) { P.vy = -v.bounce; P.bounce = 6; }
+    else P.vy = 0;
+  } else {
+    P.onGround = false;
+  }
+  if (P.bounce > 0) P.bounce -= 0.5 * dt;
+
+  P.anim += (Math.abs(P.vx) * 0.5 + (v.id === "foot" ? 0.06 : 0)) * dt;
+
+  camX = Math.max(0, Math.min(LEVEL - W, P.x - 108));
+  var wantY = Math.max(-34, Math.min(0, P.y - 118));
+  camY += (wantY - camY) * Math.min(1, 0.12 * dt);
+}
+
+/* ---------------------------------------------------------------
+   13. HUD AND OVERLAYS
+   --------------------------------------------------------------- */
+function panel(x, y, w, h, fill, edge){
+  sr(x, y, w, h, fill || C.ink);
+  sr(x, y, w, 1, edge || C.grey);
+  sr(x, y + h - 1, w, 1, edge || C.grey);
+  sr(x, y, 1, h, edge || C.grey);
+  sr(x + w - 1, y, 1, h, edge || C.grey);
+}
+
+function seenCount(){
+  var n = 0;
+  for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].seen) n++;
+  return n;
+}
+
+function strip(msg, edge, col){
+  var w = textWidth(msg) + 10;
+  var x = Math.max(2, Math.round((W - w) / 2));
+  panel(x, 134, Math.min(w, W - 4), 13, C.ink, edge);
+  text(msg, x + 5, 137, col);
+}
+
+function drawHud(){
+  var v = VEHICLES[P.veh];
+
+  panel(4, 4, textWidth(v.name) + 8, 13, C.ink, C.slate);
+  text(v.name, 8, 6, C.gold);
+
+  var s2 = seenCount() + "/" + SECTIONS.length;
+  panel(W - 4 - (textWidth(s2) + 8), 4, textWidth(s2) + 8, 13, C.ink, C.slate);
+  text(s2, W - 8 - textWidth(s2), 6, seenCount() === SECTIONS.length ? C.moss : C.mist);
+
+  /* the route, with a tick for every section */
+  var bx = 8, bw = W - 16, by = 150;
+  sr(bx, by, bw, 3, C.ink);
+  sr(bx, by + 1, bw, 1, C.slate);
+  for (var i = 0; i < STATIONS.length; i++){
+    var tx = bx + Math.round(STATIONS[i].x / LEVEL * bw);
+    sr(tx, by - 1, 1, 5, STATIONS[i].sec.seen ? C.moss : C.haze);
+  }
+  var px = bx + Math.round(P.x / LEVEL * bw);
+  sr(px - 1, by - 3, 3, 8, C.gold);
+
+  var ns = nearStation();
+  if (ns >= 0 && mode === "world"){
+    strip("Space  \u25b6  " + STATIONS[ns].sec.name, C.gold, C.paper);
+  } else if (now < hintUntil){
+    strip("Arrows move  \u00b7  Shift ride  \u00b7  M map", C.slate, C.haze);
+  }
+
+  if (now < toastUntil){
+    var w4 = textWidth(toast) + 10;
+    panel(Math.round((W - w4) / 2), 22, w4, 13, C.ink, C.gold);
+    text(toast, Math.round((W - w4) / 2) + 5, 25, C.paper);
+  }
+}
+
+function drawCard(){
+  sr(0, 0, W, H, C.black);
+  panel(2, 2, W - 4, H - 4, C.ink, C.slate);
+
+  var sec = card.sec;
+  sr(3, 3, W - 6, 12, C.slate);
+  text(sec.no + "  " + sec.name.toUpperCase(), 7, 4, C.gold);
+  var pos = (card.ci + 1) + "/" + sec.cards.length +
+            (card.pages.length > 1 ? "  p" + (card.page + 1) + "/" + card.pages.length : "");
+  textRight(pos, W - 7, 4, C.mist);
+
+  var y = 19, i;
+
+  if (card.sparse){
+    var block = card.titleLines.length + card.metaLines.length;
+    y = Math.round((H - 26 - block * LINE_H) / 2) + 10;
+    for (i = 0; i < card.titleLines.length; i++){ textCentre(card.titleLines[i], W / 2, y, C.paper); y += LINE_H; }
+    sr(Math.round(W / 2) - 14, y + 3, 28, 1, C.slate);
+    y += 8;
+    for (i = 0; i < card.metaLines.length; i++){ textCentre(card.metaLines[i], W / 2, y, C.haze); y += LINE_H; }
+    card.hits = [];
+    sr(3, H - 15, W - 6, 12, C.shadow);
+    text("\u25c0 \u25b6 entries", 7, H - 14, C.haze);
+    textRight("Esc back", W - 7, H - 14, C.haze);
+    return;
+  }
+
+  for (i = 0; i < card.titleLines.length; i++){ text(card.titleLines[i], BODY_X, y, C.paper); y += LINE_H; }
+  for (i = 0; i < card.metaLines.length; i++){ text(card.metaLines[i], BODY_X, y + 1, C.haze); y += LINE_H; }
+  if (card.metaLines.length) y += 3;
+  sr(BODY_X, y - 1, W - BODY_X * 2, 1, C.slate);
+
+  card.hits = [];
+  var page = card.pages[card.page];
+  for (i = 0; i < page.length; i++){
+    var ln = page[i], ly = card.top + i * LINE_H;
+    if (!ln.s) continue;
+    text(ln.s, BODY_X + ln.ind, ly, ln.col);
+    if (ln.link !== undefined) card.hits.push({ x:BODY_X, y:ly - 1, w:textWidth(ln.s) + 2, h:LINE_H, link:ln.link });
+  }
+
+  /* footer keys */
+  sr(3, H - 15, W - 6, 12, C.shadow);
+  text("\u25c0 \u25b6 entries", 7, H - 14, C.haze);
+  if (card.pages.length > 1) textCentre("Space  more", W / 2, H - 14, C.gold);
+  textRight("Esc back", W - 7, H - 14, C.haze);
+}
+
+function drawMap(){
+  sr(0, 0, W, H, C.black);
+  panel(2, 2, W - 4, H - 4, C.ink, C.slate);
+  sr(3, 3, W - 6, 12, C.slate);
+  text("TRAVEL TO", 7, 4, C.gold);
+  textRight(seenCount() + "/" + SECTIONS.length + " read", W - 7, 4, C.mist);
+
+  for (var i = 0; i < STATIONS.length; i++){
+    var y = 20 + i * 13, on = i === mapSel, s = STATIONS[i].sec;
+    if (on) sr(6, y - 2, W - 12, 12, C.slate);
+    text(s.no, 10, y, on ? C.gold : C.haze);
+    text(s.name, 30, y, on ? C.paper : C.mist);
+    if (s.seen) text("\u2713", W - 18, y, C.moss);
+  }
+  sr(3, H - 15, W - 6, 12, C.shadow);
+  text("\u25b2 \u25bc choose", 7, H - 14, C.haze);
+  textRight("Space go  \u00b7  Esc back", W - 7, H - 14, C.haze);
+}
+
+function drawHelp(){
+  sr(0, 0, W, H, C.black);
+  panel(2, 2, W - 4, H - 4, C.ink, C.slate);
+  sr(3, 3, W - 6, 12, C.slate);
+  text("CONTROLS", 7, 4, C.gold);
+
+  var rows = [
+    ["Arrows / A D", "move"],
+    ["Space", "jump, or read a sign"],
+    ["Shift / V", "change ride"],
+    ["1 - 5", "pick a ride"],
+    ["M", "travel map"],
+    ["Esc", "back, then out"]
+  ];
+  for (var i = 0; i < rows.length; i++){
+    var y = 22 + i * 12;
+    text(rows[i][0], 10, y, C.gold);
+    text(rows[i][1], 96, y, C.mist);
+  }
+  text("Click a [1] link in a sign to open it.", 10, 100, C.mist);
+  text("Every word here is on the standard page", 10, 112, C.haze);
+  text("too. Esc from the map goes back outside.", 10, 121, C.haze);
+
+  sr(3, H - 15, W - 6, 12, C.shadow);
+  textCentre("Esc or Keys closes this", W / 2, H - 14, C.haze);
+}
+
+function drawIntro(){
+  sr(0, 0, W, H, C.black);
+  for (var i = 0; i < 5; i++) sr(0, 40 + i * 3, W, 1, mix(C.ink, C.slate, i / 5));
+  textCentre("MD. ABIDUR RAHMAN", W / 2, 56, C.paper);
+  textCentre("a portfolio you can walk through", W / 2, 70, C.haze);
+  panel(60, 92, 120, 15, C.ink, C.gold);
+  textCentre("press any key", W / 2, 96, C.gold);
+  textCentre("9 stops  \u00b7  5 ways to travel", W / 2, 122, C.mist);
+  if (!reduceMotion){
+    var sweep = Math.round(((now / 12) % (H + 40)) - 20);
+    ctx.fillStyle = "rgba(224,181,106,.06)";
+    ctx.fillRect(0, sweep, W, 8);
+  }
+}
+
+/* ---------------------------------------------------------------
+   14. FRAME
+   --------------------------------------------------------------- */
+function frame(ts){
+  if (!running) return;
+  now = ts;
+  var dt = Math.min(3, (ts - last) / 16.6667) || 1;
+  last = ts;
+
+  if (mode === "world"){
+    step(dt);
+    var nn = nearStation() >= 0;
+    if (nn !== lastNear){ lastNear = nn; syncPad(); }
+  }
+
+  var t = Math.max(0, Math.min(1, P.x / LEVEL));
+  drawSky(t);
+  drawClouds(t);
+  drawSkyline(t);
+  drawHills(t);
+  drawGround(t);
+  drawProps(t);
+  drawEnds();
+  drawStations(t);
+  drawPlayer();
+  drawHud();
+
+  if (mode === "card") drawCard();
+  else if (mode === "map") drawMap();
+  else if (mode === "help") drawHelp();
+  else if (mode === "intro"){
+    drawIntro();
+    if (now > introUntil) { mode = "world"; hintUntil = now + 7000; }
+  }
+
+  /* a soft vignette keeps the little screen feeling like a screen */
+  ctx.fillStyle = "rgba(10,9,16,.16)";
+  ctx.fillRect(0, 0, W, 1); ctx.fillRect(0, H - 1, W, 1);
+
+  raf = requestAnimationFrame(frame);
+}
+
+/* ---------------------------------------------------------------
+   15. INPUT
+   --------------------------------------------------------------- */
+function press(k){
+  if (mode === "intro"){ mode = "world"; hintUntil = now + 7000; return; }
+
+  if (mode === "card"){
+    if (k === "left")  cardMove(-1);
+    if (k === "right") cardMove(1);
+    if (k === "a" || k === "down"){
+      if (card.page < card.pages.length - 1) card.page++;
+      else if (card.ci < card.sec.cards.length - 1) cardMove(1);
+    }
+    if (k === "up") card.page = Math.max(0, card.page - 1);
+    if (k === "b" || k === "back"){ mode = "world"; card = null; syncPad(); }
+    return;
+  }
+
+  if (mode === "map"){
+    if (k === "up")   mapSel = (mapSel + STATIONS.length - 1) % STATIONS.length;
+    if (k === "down") mapSel = (mapSel + 1) % STATIONS.length;
+    if (k === "a"){
+      P.x = STATIONS[mapSel].x - 30;
+      P.y = terrain(P.x); P.vx = 0; P.vy = 0;
+      camX = Math.max(0, Math.min(LEVEL - W, P.x - 108));
+      mode = "world"; syncPad();
+      say("Arrived at " + STATIONS[mapSel].sec.name.toLowerCase());
+    }
+    if (k === "b" || k === "back"){ mode = "world"; syncPad(); }
+    return;
+  }
+
+  if (mode === "help"){
+    if (k === "a" || k === "b" || k === "back"){ mode = "world"; syncPad(); }
+    return;
+  }
+
+  /* world */
+  if (k === "a"){
+    var ns = nearStation();
+    if (ns >= 0) { openStation(ns); return; }
+    var v = VEHICLES[P.veh];
+    if (P.onGround && v.jump > 0) { P.vy = -v.jump; P.onGround = false; }
+    return;
+  }
+  if (k === "up"){
+    var n2 = nearStation();
+    if (n2 >= 0) openStation(n2);
+    return;
+  }
+  if (k === "b") setVehicle(P.veh + 1);
+  if (k === "back") goPage();
+}
+
+function syncPad(){
+  if (!padA) return;
+  if (mode === "card"){ padA.textContent = "More"; padB.textContent = "Back"; }
+  else if (mode === "map"){ padA.textContent = "Go"; padB.textContent = "Back"; }
+  else if (mode === "help"){ padA.textContent = "OK"; padB.textContent = "Back"; }
+  else { padA.textContent = nearStation() >= 0 ? "Read" : "Jump"; padB.textContent = "Ride"; }
+}
+
+var KEYMAP = {
+  ArrowLeft:"left", ArrowRight:"right", ArrowUp:"up", ArrowDown:"down",
+  a:"left", d:"right", w:"up", s:"down",
+  A:"left", D:"right", W:"up", S:"down"
+};
+
+function onKeyDown(e){
+  if (!running) return;
+  var k = e.key, mapped = KEYMAP[k];
+
+  if (mapped){
+    keys[mapped] = true;
+    if (mapped === "left" || mapped === "right") { e.preventDefault(); return; }
+    if (!e.repeat) press(mapped);
+    e.preventDefault();
+    return;
+  }
+  if (k === " " || k === "Enter"){
+    keys.a = true;
+    if (!e.repeat) press("a");
+    e.preventDefault();
+    return;
+  }
+  if (k === "Shift" || k === "v" || k === "V"){ if (!e.repeat) press("b"); e.preventDefault(); return; }
+  if (k === "Escape"){
+    if (mode === "world") goPage(); else press("back");
+    e.preventDefault(); return;
+  }
+  if (k === "m" || k === "M"){
+    if (mode === "map") { mode = "world"; } else if (mode === "world") { mapSel = Math.max(0, nearStation()); mode = "map"; }
+    syncPad(); e.preventDefault(); return;
+  }
+  if (k === "h" || k === "H" || k === "?"){
+    mode = (mode === "help") ? "world" : (mode === "world" ? "help" : mode);
+    syncPad(); e.preventDefault(); return;
+  }
+  if (k >= "1" && k <= "9"){
+    var n = parseInt(k, 10) - 1;
+    if (mode === "card") openLink(n);
+    else if (n < VEHICLES.length) setVehicle(n);
+    e.preventDefault();
+  }
+}
+
+function onKeyUp(e){
+  var mapped = KEYMAP[e.key];
+  if (mapped) keys[mapped] = false;
+  if (e.key === " " || e.key === "Enter") keys.a = false;
+}
+
+/* pointer: click links inside a card, tap the map, dismiss the intro */
+function canvasPoint(ev){
+  var r = cv.getBoundingClientRect();
+  return { x:(ev.clientX - r.left) / r.width * W, y:(ev.clientY - r.top) / r.height * H };
+}
+cv.addEventListener("pointerdown", function(ev){
+  if (!running) return;
+  cv.focus();
+  var p = canvasPoint(ev), i;
+  if (mode === "intro"){ press("a"); return; }
+  if (mode === "card"){
+    for (i = 0; i < card.hits.length; i++){
+      var h = card.hits[i];
+      if (p.x >= h.x && p.x <= h.x + h.w && p.y >= h.y && p.y <= h.y + h.h){ openLink(h.link); return; }
+    }
+    if (p.y > H - 16) { mode = "world"; card = null; syncPad(); return; }
+    press("a");
+    return;
+  }
+  if (mode === "map"){
+    var idx = Math.floor((p.y - 18) / 13);
+    if (idx >= 0 && idx < STATIONS.length){ mapSel = idx; press("a"); }
+    return;
+  }
+  if (mode === "help"){ mode = "world"; syncPad(); }
+});
+
+/* touch pad wiring */
+function bindPad(btn){
+  var k = btn.getAttribute("data-k");
+  function down(ev){
+    ev.preventDefault();
+    btn.classList.add("hot");
+    if (k === "left" || k === "right") keys[k] = true;
+    else keys[k] = true;
+    press(k);
+  }
+  function up(ev){
+    ev.preventDefault();
+    btn.classList.remove("hot");
+    keys[k] = false;
+  }
+  btn.addEventListener("pointerdown", down);
+  btn.addEventListener("pointerup", up);
+  btn.addEventListener("pointerleave", up);
+  btn.addEventListener("pointercancel", up);
+}
+if (padEl) Array.prototype.forEach.call(padEl.querySelectorAll("button"), bindPad);
+
+/* ---------------------------------------------------------------
+   16. FIT TO WINDOW
+   --------------------------------------------------------------- */
+function resize(){
+  var padY = padEl && padEl.classList.contains("on") ? 96 : 40;
+  var sx = (window.innerWidth - 32) / W;
+  var sy = (window.innerHeight - padY) / H;
+  var s = Math.max(1, Math.min(sx, sy));
+  s = s >= 2 ? Math.floor(s) : s;           /* integer scale once there is room for it */
+  cv.style.width  = Math.round(W * s) + "px";
+  cv.style.height = Math.round(H * s) + "px";
+}
+window.addEventListener("resize", function(){ if (running) resize(); });
+
+/* ---------------------------------------------------------------
+   17. STARTING, AND GOING BACK TO THE PAGE
+   --------------------------------------------------------------- */
+function hashSection(){
+  var id = (window.location.hash || "").replace(/^#/, "");
+  for (var i = 0; i < SECTIONS.length; i++) if (SECTIONS[i].id === id) return i;
+  return -1;
+}
+
+function standingAt(){
+  var best = -1, bestD = 1e9;
+  for (var i = 0; i < STATIONS.length; i++){
+    var d = Math.abs(P.x - STATIONS[i].x);
+    if (d < bestD){ bestD = d; best = i; }
+  }
+  return (bestD < 200 && best >= 0) ? SECTIONS[best].id : "";
+}
+
+/* leaving hands the page whichever stop you were standing next to */
+function goPage(){
+  running = false;
+  cancelAnimationFrame(raf);
+  var id = standingAt();
+  window.location.href = "index.html" + (id ? "#" + id : "");
+}
+
+function start(){
+  var si = hashSection();
+  P.x = si >= 0 ? STATIONS[si].x - 30 : 100;
+  P.y = terrain(P.x); P.vx = 0; P.vy = 0; P.face = 1;
+  camX = Math.max(0, Math.min(LEVEL - W, P.x - 108));
+  camY = 0;
+  setVehicle(0, true);
+
+  if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches && padEl) padEl.classList.add("on");
+
+  running = true;
+  mode = reduceMotion ? "world" : "intro";
+  now = performance.now(); last = now;
+  introUntil = now + 2600;
+  hintUntil  = now + 7000;
+  syncPad();
+  resize();
+  cv.focus();
+  window.addEventListener("keydown", onKeyDown, { passive:false });
+  window.addEventListener("keyup", onKeyUp);
+  raf = requestAnimationFrame(frame);
+}
+
+btnExit.addEventListener("click", function(e){ e.preventDefault(); goPage(); });
+btnMap.addEventListener("click", function(){
+  if (!running) return;
+  if (mode === "map") mode = "world";
+  else { mapSel = Math.max(0, nearStation()); mode = "map"; }
+  syncPad(); cv.focus();
+});
+btnHelp.addEventListener("click", function(){
+  if (!running) return;
+  mode = (mode === "help") ? "world" : "help";
+  syncPad(); cv.focus();
+});
+
+/* ---------------------------------------------------------------
+   18. READING THE PAGE THIS RUNS ON
+   The words live in index.html and are fetched from there, so the
+   two files can never fall out of step with one another.
+   --------------------------------------------------------------- */
+var loadEl = doc.getElementById("play-load");
+var failEl = doc.getElementById("play-fail");
+
+function fail(why){
+  if (loadEl) loadEl.style.display = "none";
+  if (failEl){
+    failEl.style.display = "flex";
+    var p = failEl.querySelector("[data-why]");
+    if (p) p.textContent = why;
+  }
+}
+
+function boot(d){
+  src = d;
+  harvest();
+  if (!SECTIONS.length){
+    fail("index.html came back, but none of its sections were in it.");
+    return;
+  }
+  layout();
+  if (loadEl) loadEl.style.display = "none";
+  start();
+}
+
+if (!window.fetch || !window.DOMParser){
+  fail("This browser cannot fetch the page content.");
+} else {
+  window.fetch("index.html", { cache:"no-cache" })
+    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function(t){ boot(new DOMParser().parseFromString(t, "text/html")); })
+    .catch(function(){
+      fail("Arcade mode reads its words straight out of index.html, so it needs the site served over http. Opening the file off the disk will not work.");
+    });
+}
+
+})();
+</script>
+</body>
+</html>
