@@ -484,6 +484,8 @@ function harvestCards(sec){
 var SECTIONS = [];
 function harvest(){
   SECTIONS.length = 0;
+  var mail = src.querySelector('a[href^="mailto:"]');
+  MAILTO = mail ? mail.href : "";
   for (var i = 0; i < SECTION_IDS.length; i++){
     var sec = src.getElementById(SECTION_IDS[i]);
     if (!sec) continue;
@@ -511,8 +513,9 @@ var STATIONS = [];
 function layout(){
   LEVEL = FIRST + SPACING * (SECTIONS.length - 1) + 340;
   STATIONS = SECTIONS.map(function(s, i){
-    return { sec:s, x: FIRST + i * SPACING };
+    return { sec:s, x: FIRST + i * SPACING, real:true };
   });
+  layoutExtras();
 }
 
 /* deterministic noise so scenery never flickers between frames */
@@ -798,6 +801,17 @@ function monument(id, x, g, near){
       wr(x - 2, g - 42, 4, 6, C.gold);
       break;
 
+    case "secret":                   /* a bench and a fire, nobody around */
+      wr(x - 15, g - 11, 22, 3, C.rust);
+      wr(x - 14, g - 8, 2, 8, C.rust);
+      wr(x + 4, g - 8, 2, 8, C.rust);
+      wr(x - 15, g - 18, 22, 2, C.rust);
+      wr(x + 13, g - 4, 12, 4, C.ink);
+      wr(x + 16, g - 9, 2, 5, near ? C.gold : C.rust);
+      wr(x + 19, g - 12, 2, 8, near ? C.red : C.rust);
+      wr(x + 22, g - 8, 2, 4, near ? C.gold : C.rust);
+      break;
+
     default:                         /* contact: a booth with an aerial */
       wr(x - 11, g - 32, 22, 32, C.red);
       wr(x - 8, g - 28, 16, 16, C.night);
@@ -998,6 +1012,7 @@ function nearStation(){
 function setVehicle(i, quiet){
   P.veh = (i + VEHICLES.length) % VEHICLES.length;
   P.bounce = 0;
+  ridesUsed[VEHICLES[P.veh].id] = true;
   if (!quiet) say(VEHICLES[P.veh].name + " \u00b7 " + VEHICLES[P.veh].hint);
 }
 
@@ -1097,21 +1112,50 @@ function step(dt){
   if (P.vy >  4) P.vy = 4;
   if (P.vy < -3) P.vy = -3;
 
+  var y0 = P.y;
   P.x += P.vx * dt;
   P.y += P.vy * dt;
 
   if (P.x < 24) { P.x = 24; P.vx = 0; }
-  if (P.x > LEVEL - 40) { P.x = LEVEL - 40; P.vx = 0; }
+  if (P.x > LEVEL - 18) { P.x = LEVEL - 18; P.vx = 0; }
   if (P.y < 26) { P.y = 26; P.vy = 0; }
 
+  /* ledges catch you from above only, so nothing can trap you under one */
+  var landed = false;
+  if (P.vy >= 0){
+    for (var pi = 0; pi < PLATFORMS.length; pi++){
+      var pf = PLATFORMS[pi];
+      if (P.x > pf.x - 3 && P.x < pf.x + pf.w + 3 && y0 <= pf.y + 2 && P.y >= pf.y){
+        P.y = pf.y;
+        landed = true;
+        if (v.bounce && !keys.down) { P.vy = -v.bounce; P.bounce = 6; }
+        else P.vy = 0;
+        break;
+      }
+    }
+  }
+
   var g = terrain(P.x);
-  if (P.y >= g){
+  if (landed){
+    P.onGround = true;
+  } else if (P.y >= g){
     P.y = g;
     P.onGround = true;
     if (v.bounce && !keys.down) { P.vy = -v.bounce; P.bounce = 6; }
     else P.vy = 0;
   } else {
     P.onGround = false;
+  }
+
+  grabDisks();
+  if (!endShown && P.x > FLAG_X - 8){ endShown = true; mode = "end"; syncPad(); }
+  if (konami && !reduceMotion && Math.abs(P.vx) > 0.2){
+    trail.push({ x:P.x, y:P.y - 10, t:26 });
+    if (trail.length > 70) trail.shift();
+  }
+  for (var ti = trail.length - 1; ti >= 0; ti--){
+    trail[ti].t -= dt;
+    if (trail[ti].t <= 0) trail.splice(ti, 1);
   }
   if (P.bounce > 0) P.bounce -= 0.5 * dt;
 
@@ -1156,6 +1200,12 @@ function drawHud(){
   panel(W - 4 - (textWidth(s2) + 8), 4, textWidth(s2) + 8, 13, C.ink, C.slate);
   text(s2, W - 8 - textWidth(s2), 6, seenCount() === SECTIONS.length ? C.moss : C.mist);
 
+  var dk = disksFound() + "/" + DISKS.length, dw = textWidth(dk) + 18;
+  panel(W - 4 - dw, 19, dw, 13, C.ink, C.slate);
+  sr(W - 2 - dw + 3, 22, 7, 7, C.ink);
+  sr(W - 2 - dw + 4, 23, 5, 2, C.cyan);
+  text(dk, W - 4 - dw + 14, 21, disksFound() === DISKS.length ? C.moss : C.mist);
+
   /* the route, with a tick for every section */
   var bx = 8, bw = W - 16, by = 150;
   sr(bx, by, bw, 3, C.ink);
@@ -1170,6 +1220,10 @@ function drawHud(){
   var ns = nearStation();
   if (ns >= 0 && mode === "world"){
     strip("Space  \u25b6  " + STATIONS[ns].sec.name, C.gold, C.paper);
+  } else if (nearArcade() && mode === "world"){
+    strip("Space  \u25b6  The arcade", C.gold, C.paper);
+  } else if (nearFlag() && mode === "world"){
+    strip("Space  \u25b6  Results", C.gold, C.paper);
   } else if (now < hintUntil){
     strip("Arrows move  \u00b7  Shift ride  \u00b7  M map", C.slate, C.haze);
   }
@@ -1236,12 +1290,13 @@ function drawMap(){
   text("TRAVEL TO", 7, 4, C.gold);
   textRight(seenCount() + "/" + SECTIONS.length + " read", W - 7, 4, C.mist);
 
-  for (var i = 0; i < STATIONS.length; i++){
-    var y = 20 + i * 13, on = i === mapSel, s = STATIONS[i].sec;
-    if (on) sr(6, y - 2, W - 12, 12, C.slate);
-    text(s.no, 10, y, on ? C.gold : C.haze);
-    text(s.name, 30, y, on ? C.paper : C.mist);
-    if (s.seen) text("\u2713", W - 18, y, C.moss);
+  for (var i = 0; i < MAPROWS.length; i++){
+    var y = 19 + i * 12, on = i === mapSel, r = MAPROWS[i];
+    if (on) sr(6, y - 2, W - 12, 11, C.slate);
+    text(r.no, 10, y, on ? C.gold : C.haze);
+    text(r.name, 30, y, on ? C.paper : C.mist);
+    if (r.sec && r.sec.seen) text("\u2713", W - 18, y, C.moss);
+    if (!r.sec) text(disksFound() + "/" + DISKS.length, W - 34, y, C.cyan);
   }
   sr(3, H - 15, W - 6, 12, C.shadow);
   text("\u25b2 \u25bc choose", 7, H - 14, C.haze);
@@ -1267,9 +1322,10 @@ function drawHelp(){
     text(rows[i][0], 10, y, C.gold);
     text(rows[i][1], 96, y, C.mist);
   }
-  text("Click a [1] link in a sign to open it.", 10, 100, C.mist);
-  text("Every word here is on the standard page", 10, 112, C.haze);
-  text("too. Esc from the map goes back outside.", 10, 121, C.haze);
+  text("Floppies hide on the high ledges. Some", 10, 98, C.mist);
+  text("need the jetpack, one needs the pogo.", 10, 107, C.mist);
+  text("The arcade is just past the games stop.", 10, 119, C.gold);
+  text("Every word here is on the page too.", 10, 131, C.haze);
 
   sr(3, H - 15, W - 6, 12, C.shadow);
   textCentre("Esc or Keys closes this", W / 2, H - 14, C.haze);
@@ -1305,6 +1361,19 @@ function frame(ts){
     if (nn !== lastNear){ lastNear = nn; syncPad(); }
   }
 
+  if (mode === "room"){
+    stepRoom(dt);
+    drawRoom();
+    raf = requestAnimationFrame(frame);
+    return;
+  }
+  if (mode === "game"){
+    if (G && !G.over) G.update(dt);
+    if (G) G.draw();
+    raf = requestAnimationFrame(frame);
+    return;
+  }
+
   var t = Math.max(0, Math.min(1, P.x / LEVEL));
   drawSky(t);
   drawClouds(t);
@@ -1312,14 +1381,22 @@ function frame(ts){
   drawHills(t);
   drawGround(t);
   drawProps(t);
+  drawPlatforms();
+  drawArcade();
   drawEnds();
   drawStations(t);
+  drawDisks();
+  for (var tr = 0; tr < trail.length; tr++){
+    var q = trail[tr];
+    wr(q.x, q.y, 2, 2, [C.red, C.gold, C.moss, C.cyan, C.mist][tr % 5]);
+  }
   drawPlayer();
   drawHud();
 
   if (mode === "card") drawCard();
   else if (mode === "map") drawMap();
   else if (mode === "help") drawHelp();
+  else if (mode === "end") drawEnd();
   else if (mode === "intro"){
     drawIntro();
     if (now > introUntil) { mode = "world"; hintUntil = now + 7000; }
@@ -1351,14 +1428,15 @@ function press(k){
   }
 
   if (mode === "map"){
-    if (k === "up")   mapSel = (mapSel + STATIONS.length - 1) % STATIONS.length;
-    if (k === "down") mapSel = (mapSel + 1) % STATIONS.length;
+    if (k === "up")   mapSel = (mapSel + MAPROWS.length - 1) % MAPROWS.length;
+    if (k === "down") mapSel = (mapSel + 1) % MAPROWS.length;
     if (k === "a"){
-      P.x = STATIONS[mapSel].x - 30;
+      var row = MAPROWS[mapSel];
+      P.x = row.x;
       P.y = terrain(P.x); P.vx = 0; P.vy = 0;
       camX = Math.max(0, Math.min(LEVEL - W, P.x - 108));
       mode = "world"; syncPad();
-      say("Arrived at " + STATIONS[mapSel].sec.name.toLowerCase());
+      say("Arrived at " + row.name.toLowerCase());
     }
     if (k === "b" || k === "back"){ mode = "world"; syncPad(); }
     return;
@@ -1369,17 +1447,47 @@ function press(k){
     return;
   }
 
+  if (mode === "room"){
+    if (k === "a"){
+      if (room.door) leaveRoom();
+      else if (room.sel >= 0) startGame(CABS[room.sel].id);
+    }
+    if (k === "b" || k === "back") leaveRoom();
+    return;
+  }
+
+  if (mode === "game"){
+    if (!G){ mode = "room"; syncPad(); return; }
+    if (G.over){
+      if (k === "a") G.reset();
+      if (k === "b" || k === "back"){ mode = "room"; syncPad(); }
+      return;
+    }
+    /* B only leaves a cabinet that does not need B to play */
+    if (k === "back" || (k === "b" && !G.usesB)){ mode = "room"; syncPad(); return; }
+    if (G.press) G.press(k);
+    return;
+  }
+
+  if (mode === "end"){
+    if (k === "a" || k === "b" || k === "back"){ mode = "world"; syncPad(); }
+    return;
+  }
+
   /* world */
   if (k === "a"){
     var ns = nearStation();
     if (ns >= 0) { openStation(ns); return; }
+    if (nearArcade()){ enterRoom(); return; }
+    if (nearFlag()){ mode = "end"; syncPad(); return; }
     var v = VEHICLES[P.veh];
     if (P.onGround && v.jump > 0) { P.vy = -v.jump; P.onGround = false; }
     return;
   }
   if (k === "up"){
     var n2 = nearStation();
-    if (n2 >= 0) openStation(n2);
+    if (n2 >= 0){ openStation(n2); return; }
+    if (nearArcade()) enterRoom();
     return;
   }
   if (k === "b") setVehicle(P.veh + 1);
@@ -1388,7 +1496,14 @@ function press(k){
 
 function syncPad(){
   if (!padA) return;
-  if (mode === "card"){ padA.textContent = "More"; padB.textContent = "Back"; }
+  if (btnMap) btnMap.textContent = (mode === "room" || mode === "game" || mode === "end") ? "Back" : "Map";
+  if (mode === "room"){ padA.textContent = room.door ? "Out" : (room.sel >= 0 ? "Play" : "\u2014"); padB.textContent = "Out"; }
+  else if (mode === "game"){
+    padA.textContent = (G && G.over) ? "Again" : (G && G.id === "roids" ? "Thrust" : "Go");
+    padB.textContent = (G && G.usesB && !G.over) ? "Fire" : "Back";
+  }
+  else if (mode === "end"){ padA.textContent = "OK"; padB.textContent = "Back"; }
+  else if (mode === "card"){ padA.textContent = "More"; padB.textContent = "Back"; }
   else if (mode === "map"){ padA.textContent = "Go"; padB.textContent = "Back"; }
   else if (mode === "help"){ padA.textContent = "OK"; padB.textContent = "Back"; }
   else { padA.textContent = nearStation() >= 0 ? "Read" : "Jump"; padB.textContent = "Ride"; }
@@ -1400,8 +1515,25 @@ var KEYMAP = {
   A:"left", D:"right", W:"up", S:"down"
 };
 
+var KON = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+var konPos = 0;
+function konamiWatch(k){
+  if (k === KON[konPos]){
+    konPos++;
+    if (konPos === KON.length){
+      konPos = 0;
+      konami = !konami;
+      trail = [];
+      say(konami ? "Konami" : "Konami off");
+    }
+  } else {
+    konPos = (k === KON[0]) ? 1 : 0;
+  }
+}
+
 function onKeyDown(e){
   if (!running) return;
+  konamiWatch(e.key);
   var k = e.key, mapped = KEYMAP[k];
 
   if (mapped){
@@ -1507,6 +1639,680 @@ function resize(){
 }
 window.addEventListener("resize", function(){ if (running) resize(); });
 
+
+/* ===============================================================
+   16b. EXTRAS
+   Platforms to climb, floppies to find, an arcade off the road,
+   a stop that is not on the map, and something at the finish line.
+   =============================================================== */
+var ARCADE_X = 0, FLAG_X = 0, MAILTO = "";
+var PLATFORMS = [], DISKS = [], MAPROWS = [];
+var runStart = 0, endShown = false, konami = false, trail = [];
+var ridesUsed = {};
+
+var SECRET = {
+  id:"secret", no:"??", name:"Off the record", lead:"", seen:false,
+  cards:[{
+    intro:true, title:"", meta:"", when:"", tags:[], links:[],
+    body:[
+      "You went looking past the finish line, which is the entire reason there is something back here.",
+      "This runs at 240 by 160. Every letter is a five by eight bitmap laid down a pixel at a time, and there is not one image file in either page.",
+      "None of these words are typed twice, either. Arcade mode fetches index.html and reads the sections straight out of it, so the page is always the source and this can never drift.",
+      "If you got this far, say hello."
+    ]
+  }]
+};
+
+/* ---- persistence: works on a real host, shrugs anywhere else ---- */
+var memBest = {};
+function bestOf(id){
+  if (memBest[id] !== undefined) return memBest[id];
+  var v = 0;
+  try { v = parseInt(window.localStorage.getItem("arcade.best." + id), 10) || 0; } catch(e){ v = 0; }
+  memBest[id] = v;
+  return v;
+}
+function setBest(id, v){
+  if (v <= bestOf(id)) return;
+  memBest[id] = v;
+  try { window.localStorage.setItem("arcade.best." + id, String(v)); } catch(e){}
+}
+
+function layoutExtras(){
+  FLAG_X   = LEVEL - 126;
+  ARCADE_X = FIRST + SPACING * 2 + 250;
+
+  PLATFORMS = [
+    { x: 690, y: 96, w: 34 }, { x: 754, y: 74, w: 26 },
+    { x:1480, y: 88, w: 42 },
+    { x:2280, y: 72, w: 30 }, { x:2340, y: 50, w: 24 },
+    { x:3030, y: 92, w: 46 },
+    { x:3860, y: 68, w: 28 },
+    { x:4460, y: 84, w: 38 }, { x:4520, y: 58, w: 26 }
+  ];
+
+  /* twelve floppies: a few in plain sight, most needing the right ride */
+  DISKS = [
+    { x:  58, y: 0 },  { x: 706, y: 86 }, { x: 766, y: 64 },
+    { x:1180, y: 0 },  { x:1500, y: 78 }, { x:2352, y: 40 },
+    { x:2900, y: 34 }, { x:3052, y: 82 }, { x:3874, y: 58 },
+    { x:4200, y: 0 },  { x:4532, y: 48 }, { x:LEVEL - 66, y: 0 }
+  ];
+  for (var i = 0; i < DISKS.length; i++){
+    if (!DISKS[i].y) DISKS[i].y = terrain(DISKS[i].x) - 10;
+    DISKS[i].got = false;
+  }
+
+  SECRET.seen = false;
+  SECRET.cards[0].links = MAILTO ? [{ label:"Say hello", href:MAILTO }] : [];
+  STATIONS.push({ sec:SECRET, x: LEVEL - 42, secret:true });
+
+  MAPROWS = [];
+  for (i = 0; i < SECTIONS.length; i++)
+    MAPROWS.push({ no:SECTIONS[i].no, name:SECTIONS[i].name, x:STATIONS[i].x - 30, sec:SECTIONS[i] });
+  MAPROWS.push({ no:"\u25b6", name:"The arcade", x:ARCADE_X - 26, sec:null });
+}
+
+function disksFound(){
+  var n = 0;
+  for (var i = 0; i < DISKS.length; i++) if (DISKS[i].got) n++;
+  return n;
+}
+function nearArcade(){ return Math.abs(P.x - ARCADE_X) < 28; }
+function nearFlag(){ return Math.abs(P.x - FLAG_X) < 30; }
+
+/* ---- the floppies and the ledges they sit on ---- */
+function drawPlatforms(){
+  for (var i = 0; i < PLATFORMS.length; i++){
+    var p = PLATFORMS[i];
+    if (p.x - camX < -60 || p.x - camX > W + 20) continue;
+    wr(p.x, p.y, p.w, 2, C.mist);
+    wr(p.x, p.y + 2, p.w, 3, C.slate);
+    wr(p.x + 2, p.y + 5, 2, 4, C.grey);
+    wr(p.x + p.w - 4, p.y + 5, 2, 4, C.grey);
+  }
+}
+
+function drawDisks(){
+  var bob = reduceMotion ? 0 : Math.round(Math.sin(now / 300) * 1.5);
+  for (var i = 0; i < DISKS.length; i++){
+    var d = DISKS[i];
+    if (d.got) continue;
+    if (d.x - camX < -20 || d.x - camX > W + 20) continue;
+    var y = d.y + bob;
+    wr(d.x - 4, y - 4, 9, 9, C.ink);
+    wr(d.x - 3, y - 3, 7, 3, C.mist);
+    wr(d.x - 1, y - 3, 3, 2, C.slate);
+    wr(d.x - 3, y + 1, 7, 3, C.cyan);
+  }
+}
+
+function grabDisks(){
+  for (var i = 0; i < DISKS.length; i++){
+    var d = DISKS[i];
+    if (d.got) continue;
+    if (Math.abs(d.x - P.x) < 11 && Math.abs(d.y - (P.y - 10)) < 14){
+      d.got = true;
+      var n = disksFound();
+      say(n === DISKS.length ? "Every floppy found" : "Floppy  " + n + "/" + DISKS.length);
+    }
+  }
+}
+
+/* ---- the arcade storefront on the roadside ---- */
+function drawArcade(){
+  var x = ARCADE_X, g = Math.round(terrain(x));
+  if (x - camX < -80 || x - camX > W + 80) return;
+  var near = nearArcade();
+  wr(x - 24, g - 42, 48, 42, C.shadow);
+  wr(x - 26, g - 46, 52, 5, C.slate);
+  wr(x - 22, g - 45, 44, 3, near ? C.gold : C.red);
+  var lbl = "ARCADE";
+  text(lbl, Math.round(x - textWidth(lbl) / 2 - camX), Math.round(g - 38 - camY), near ? C.gold : C.haze);
+  wr(x - 8, g - 26, 16, 26, C.night);
+  wr(x - 8, g - 26, 16, 2, C.cyan);
+  wr(x - 20, g - 28, 9, 12, near ? C.gold : C.slate);
+  wr(x + 11, g - 28, 9, 12, near ? C.red : C.slate);
+  if (near && !reduceMotion){
+    var bob = Math.round(Math.sin(now / 220) * 1.5);
+    text("\u25bc", Math.round(x - 3 - camX), Math.round(g - 56 - camY + bob), C.gold);
+  }
+}
+
+/* ===============================================================
+   16c. THE ROOM
+   =============================================================== */
+var room = { x:120, vx:0, face:1, anim:0, sel:-1, door:false };
+var CABS = [
+  { id:"snake", name:"SNAKE",     x: 56, col:C.moss },
+  { id:"roids", name:"ASTEROIDS", x:120, col:C.cyan },
+  { id:"brick", name:"BREAKOUT",  x:184, col:C.red  }
+];
+
+function enterRoom(){
+  room.x = 120; room.vx = 0; room.face = 1; room.sel = -1; room.door = false;
+  mode = "room"; syncPad();
+}
+function leaveRoom(){
+  P.x = ARCADE_X; P.y = terrain(P.x); P.vx = 0; P.vy = 0;
+  mode = "world"; syncPad();
+}
+
+function stepRoom(dt){
+  var dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+  if (dir){ room.vx += dir * 0.3 * dt; room.face = dir; }
+  else room.vx *= Math.pow(0.72, dt);
+  room.vx = Math.max(-1.3, Math.min(1.3, room.vx));
+  room.x += room.vx * dt;
+  room.x = Math.max(20, Math.min(W - 20, room.x));
+  room.anim += Math.abs(room.vx) * 0.5 * dt;
+
+  var was = room.sel, wasDoor = room.door;
+  room.door = room.x < 32;
+  room.sel = -1;
+  if (!room.door){
+    var bd = 1e9;
+    for (var i = 0; i < CABS.length; i++){
+      var d = Math.abs(room.x - CABS[i].x);
+      if (d < bd){ bd = d; room.sel = i; }
+    }
+  }
+  if (was !== room.sel || wasDoor !== room.door) syncPad();
+}
+
+function walker(x, y, f, anim, moving){
+  var bob = moving && !reduceMotion ? Math.round(Math.sin(anim * 2) * 0.6) : 0;
+  y += bob;
+  sr(x - 3, y - 21, 7, 3, C.gold);
+  sr(x - 3 + (f > 0 ? 4 : -2), y - 20, 3, 1, C.gold);
+  sr(x - 2, y - 18, 5, 4, C.mist);
+  sr(x + (f > 0 ? 1 : -2), y - 17, 1, 1, C.ink);
+  sr(x - 3, y - 14, 7, 7, C.deep);
+  sr(x - 3, y - 13, 7, 1, C.sky);
+  var sw = moving ? Math.sin(anim) * 2.5 : 0;
+  sr(x - 3 + Math.round(2 + sw), y - 7, 2, 7, C.ink);
+  sr(x - 3 + Math.round(2 - sw), y - 7, 2, 7, C.shadow);
+}
+
+function drawRoom(){
+  var WALL = 116, FEET = 138;
+  sr(0, 0, W, H, mix(C.night, C.black, 0.5));
+  for (var b = 0; b < 7; b++) sr(0, b * 4, W, 2, mix(C.night, C.black, 0.28 + b * 0.04));
+
+  /* two posters and a strip light */
+  sr(16, 24, 26, 20, C.shadow); sr(18, 26, 22, 12, C.deep);  sr(18, 40, 14, 2, C.haze);
+  sr(198, 28, 26, 18, C.shadow); sr(200, 30, 22, 10, C.rust); sr(200, 42, 12, 2, C.haze);
+  sr(96, 20, 48, 2, C.gold);
+
+  /* the way out, at the left-hand wall */
+  sr(2, WALL - 36, 20, 36, C.black);
+  sr(2, WALL - 36, 20, 2, C.grey);
+  sr(4, WALL - 32, 16, 26, mix(C.night, C.black, 0.7));
+  text("out", 4, WALL - 30, room.door ? C.gold : C.haze);
+
+  for (var i = 0; i < CABS.length; i++){
+    var c = CABS[i], x = c.x, on = room.sel === i;
+    sr(x - 13, WALL - 44, 26, 44, on ? C.slate : C.ink);
+    sr(x - 13, WALL - 47, 26, 3, c.col);
+    sr(x - 10, WALL - 41, 20, 15, C.black);
+    var ph = Math.floor(now / 160 + i * 3);
+    if (c.id === "snake"){
+      for (var s2 = 0; s2 < 4; s2++) sr(x - 8 + ((ph + s2) % 9) * 2, WALL - 35, 2, 2, c.col);
+    } else if (c.id === "roids"){
+      sr(x - 9 + (ph % 18), WALL - 37, 3, 3, c.col);
+      sr(x + 6 - (ph % 16), WALL - 31, 2, 2, C.mist);
+    } else {
+      for (var k2 = 0; k2 < 5; k2++) sr(x - 9 + k2 * 4, WALL - 39, 3, 2, c.col);
+      sr(x - 9 + (ph % 17), WALL - 31, 2, 2, C.mist);
+    }
+    sr(x - 10, WALL - 23, 20, 5, C.shadow);
+    sr(x - 6, WALL - 22, 3, 3, c.col);
+    sr(x + 3, WALL - 22, 3, 3, C.gold);
+    sr(x - 13, WALL - 3, 26, 3, mix(C.black, C.ink, 0.5));
+  }
+
+  /* the floor the visitor actually stands on */
+  sr(0, WALL, W, H - WALL, C.shadow);
+  sr(0, WALL, W, 1, C.grey);
+  for (var t2 = 0; t2 < W; t2 += 10) sr(t2, WALL + 20, 5, 2, mix(C.shadow, C.black, 0.55));
+  sr(0, FEET + 2, W, 1, mix(C.shadow, C.black, 0.4));
+  sr(Math.round(room.x) - 5, FEET, 10, 2, mix(C.shadow, C.black, 0.6));
+
+  walker(Math.round(room.x), FEET, room.face, room.anim, Math.abs(room.vx) > 0.15);
+
+  sr(0, 0, W, 14, C.ink); sr(0, 14, W, 1, C.slate);
+  text("THE ARCADE", 6, 3, C.gold);
+  textRight("Esc  out", W - 6, 3, C.haze);
+
+  var msg = null;
+  if (room.door) msg = "Space  \u25b6  back to the road";
+  else if (room.sel >= 0) msg = "Space  \u25b6  " + CABS[room.sel].name + "    best " + bestOf(CABS[room.sel].id);
+  if (msg){
+    var w2 = textWidth(msg) + 10, x2 = Math.max(2, Math.round((W - w2) / 2));
+    panel(x2, 144, Math.min(w2, W - 4), 13, C.ink, C.gold);
+    text(msg, x2 + 5, 147, C.paper);
+  } else {
+    textCentre("three cabinets, one door", W / 2, 147, C.grey);
+  }
+}
+
+/* ===============================================================
+   16d. THE CABINETS
+   =============================================================== */
+function fillPoly(pts, col){
+  var minY = 1e9, maxY = -1e9, i;
+  for (i = 0; i < pts.length; i++){ if (pts[i][1] < minY) minY = pts[i][1]; if (pts[i][1] > maxY) maxY = pts[i][1]; }
+  for (var y = Math.floor(minY); y <= Math.ceil(maxY); y++){
+    var xs = [];
+    for (i = 0; i < pts.length; i++){
+      var a = pts[i], b = pts[(i + 1) % pts.length];
+      if ((a[1] <= y && b[1] > y) || (b[1] <= y && a[1] > y))
+        xs.push(a[0] + (y - a[1]) / (b[1] - a[1]) * (b[0] - a[0]));
+    }
+    xs.sort(function(p, q){ return p - q; });
+    for (i = 0; i + 1 < xs.length; i += 2)
+      sr(Math.round(xs[i]), y, Math.max(1, Math.round(xs[i + 1] - xs[i])), 1, col);
+  }
+}
+
+var G = null;
+
+function endGame(g){
+  g.newBest = g.score > 0 && g.score > bestOf(g.id);
+  setBest(g.id, g.score);
+  g.over = true;
+}
+
+function gameBar(g){
+  sr(0, 0, W, 14, C.ink); sr(0, 14, W, 1, C.slate);
+  text(g.name, 6, 3, C.gold);
+  textRight("score " + g.score + "   best " + bestOf(g.id), W - 6, 3, C.mist);
+}
+function gameOverCard(g){
+  var w = 150, x = Math.round((W - w) / 2);
+  panel(x, 52, w, 56, C.ink, C.gold);
+  textCentre("GAME OVER", W / 2, 58, C.paper);
+  textCentre("score " + g.score, W / 2, 72, C.gold);
+  textCentre(g.newBest ? "a new best" : "best " + bestOf(g.id), W / 2, 82, g.newBest ? C.moss : C.haze);
+  textCentre("Space  again", W / 2, 94, C.mist);
+  sr(0, 142, W, H - 142, C.black);
+  textCentre("Esc  back to the arcade", W / 2, 148, C.grey);
+}
+
+/* ---------------- SNAKE ---------------- */
+function Snake(){
+  var CW = 8, COLS = 28, ROWS = 14, OX = 8, OY = 22;
+  var self = this;
+  this.id = "snake"; this.name = "SNAKE"; this.usesB = false;
+
+  function freeCell(){
+    for (var guard = 0; guard < 400; guard++){
+      var c = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+      var hit = false;
+      for (var i = 0; i < self.body.length; i++)
+        if (self.body[i].x === c.x && self.body[i].y === c.y){ hit = true; break; }
+      if (!hit) return c;
+    }
+    return { x:0, y:0 };
+  }
+
+  this.reset = function(){
+    this.body = [{ x:6, y:7 }, { x:5, y:7 }, { x:4, y:7 }];
+    this.dir = { x:1, y:0 }; this.next = { x:1, y:0 };
+    this.score = 0; this.over = false; this.t = 0;
+    this.food = freeCell();
+  };
+
+  this.press = function(k){
+    var d = this.dir;
+    if (k === "left"  && d.x !==  1) this.next = { x:-1, y:0 };
+    if (k === "right" && d.x !== -1) this.next = { x: 1, y:0 };
+    if (k === "up"    && d.y !==  1) this.next = { x:0, y:-1 };
+    if (k === "down"  && d.y !== -1) this.next = { x:0, y: 1 };
+  };
+
+  this.update = function(dt){
+    var every = Math.max(3.5, 9 - this.score / 30);
+    this.t += dt;
+    if (this.t < every) return;
+    this.t = 0;
+    this.dir = this.next;
+    var h = { x: this.body[0].x + this.dir.x, y: this.body[0].y + this.dir.y };
+    if (h.x < 0 || h.y < 0 || h.x >= COLS || h.y >= ROWS){ this.die(); return; }
+    for (var i = 0; i < this.body.length - 1; i++)
+      if (this.body[i].x === h.x && this.body[i].y === h.y){ this.die(); return; }
+    this.body.unshift(h);
+    if (h.x === this.food.x && h.y === this.food.y){ this.score += 10; this.food = freeCell(); }
+    else this.body.pop();
+  };
+
+  this.die = function(){ endGame(this); };
+
+  this.draw = function(){
+    sr(0, 0, W, H, C.black);
+    sr(OX - 2, OY - 2, COLS * CW + 4, ROWS * CW + 4, C.ink);
+    sr(OX - 2, OY - 2, COLS * CW + 4, 1, C.slate);
+    sr(OX - 2, OY + ROWS * CW + 1, COLS * CW + 4, 1, C.slate);
+    for (var gx = 0; gx < COLS; gx += 2)
+      for (var gy = 0; gy < ROWS; gy += 2)
+        sr(OX + gx * CW, OY + gy * CW, 1, 1, mix(C.ink, C.slate, 0.6));
+    sr(OX + this.food.x * CW + 1, OY + this.food.y * CW + 1, CW - 2, CW - 2, C.gold);
+    sr(OX + this.food.x * CW + 2, OY + this.food.y * CW + 2, 2, 2, C.paper);
+    for (var i = this.body.length - 1; i >= 0; i--){
+      var b = this.body[i];
+      sr(OX + b.x * CW, OY + b.y * CW, CW - 1, CW - 1, i ? C.moss : C.cyan);
+      if (!i) sr(OX + b.x * CW + 2, OY + b.y * CW + 2, 2, 2, C.ink);
+    }
+    gameBar(this);
+    textCentre("length " + this.body.length, W / 2, 148, C.grey);
+    if (this.over) gameOverCard(this);
+  };
+}
+
+/* ---------------- ASTEROIDS ---------------- */
+function Roids(){
+  var TOP = 16;
+  this.id = "roids"; this.name = "ASTEROIDS"; this.usesB = true;
+
+  function rock(x, y, r){
+    var shape = [], n = 9;
+    for (var i = 0; i < n; i++) shape.push(0.72 + Math.random() * 0.5);
+    var a = Math.random() * 6.283, sp = (0.35 + Math.random() * 0.5) * (14 / r);
+    return { x:x, y:y, r:r, shape:shape, ang:Math.random() * 6.283,
+             spin:(Math.random() - 0.5) * 0.04, vx:Math.cos(a) * sp, vy:Math.sin(a) * sp };
+  }
+
+  this.reset = function(){
+    this.ship = { x:W / 2, y:(H + TOP) / 2, a:-1.57, vx:0, vy:0 };
+    this.bul = []; this.rocks = []; this.bits = [];
+    this.score = 0; this.lives = 3; this.over = false;
+    this.wave = 0; this.safe = 60; this.cool = 0;
+    this.spawnWave();
+  };
+
+  this.spawnWave = function(){
+    this.wave++;
+    var n = Math.min(7, 3 + this.wave);
+    for (var i = 0; i < n; i++){
+      var x = Math.random() * W, y = TOP + Math.random() * (H - TOP);
+      if (Math.abs(x - this.ship.x) < 46 && Math.abs(y - this.ship.y) < 46){ x = (x + 110) % W; }
+      this.rocks.push(rock(x, y, 13));
+    }
+  };
+
+  this.press = function(k){
+    if (k === "b" && this.cool <= 0){
+      var s = this.ship;
+      this.bul.push({ x:s.x + Math.cos(s.a) * 6, y:s.y + Math.sin(s.a) * 6,
+                      vx:Math.cos(s.a) * 3.4 + s.vx, vy:Math.sin(s.a) * 3.4 + s.vy, life:46 });
+      this.cool = 7;
+    }
+  };
+
+  this.hurt = function(){
+    this.lives--;
+    this.ship.x = W / 2; this.ship.y = (H + TOP) / 2;
+    this.ship.vx = 0; this.ship.vy = 0; this.ship.a = -1.57;
+    this.safe = 90;
+    for (var i = 0; i < 14; i++)
+      this.bits.push({ x:this.ship.x, y:this.ship.y, vx:(Math.random()-0.5)*3, vy:(Math.random()-0.5)*3, life:30 });
+    if (this.lives <= 0) endGame(this);
+  };
+
+  this.update = function(dt){
+    var s = this.ship, i, j;
+    if (keys.left)  s.a -= 0.075 * dt;
+    if (keys.right) s.a += 0.075 * dt;
+    if (keys.a){
+      s.vx += Math.cos(s.a) * 0.09 * dt;
+      s.vy += Math.sin(s.a) * 0.09 * dt;
+      if (!reduceMotion && Math.random() < 0.5)
+        this.bits.push({ x:s.x - Math.cos(s.a) * 6, y:s.y - Math.sin(s.a) * 6,
+                         vx:-Math.cos(s.a), vy:-Math.sin(s.a), life:10 });
+    }
+    s.vx *= Math.pow(0.992, dt); s.vy *= Math.pow(0.992, dt);
+    var sp = Math.sqrt(s.vx*s.vx + s.vy*s.vy);
+    if (sp > 2.6){ s.vx = s.vx / sp * 2.6; s.vy = s.vy / sp * 2.6; }
+    s.x += s.vx * dt; s.y += s.vy * dt;
+    if (this.cool > 0) this.cool -= dt;
+    if (this.safe > 0) this.safe -= dt;
+
+    function wrapAll(o, r){
+      if (o.x < -r) o.x += W + r * 2; if (o.x > W + r) o.x -= W + r * 2;
+      if (o.y < TOP - r) o.y += H - TOP + r * 2; if (o.y > H + r) o.y -= H - TOP + r * 2;
+    }
+    wrapAll(s, 6);
+
+    for (i = this.bul.length - 1; i >= 0; i--){
+      var b = this.bul[i];
+      b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+      wrapAll(b, 1);
+      if (b.life <= 0) this.bul.splice(i, 1);
+    }
+    for (i = this.bits.length - 1; i >= 0; i--){
+      var p = this.bits[i];
+      p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt;
+      if (p.life <= 0) this.bits.splice(i, 1);
+    }
+
+    for (i = this.rocks.length - 1; i >= 0; i--){
+      var r = this.rocks[i];
+      r.x += r.vx * dt; r.y += r.vy * dt; r.ang += r.spin * dt;
+      wrapAll(r, r.r);
+
+      for (j = this.bul.length - 1; j >= 0; j--){
+        var bb = this.bul[j];
+        if ((bb.x - r.x) * (bb.x - r.x) + (bb.y - r.y) * (bb.y - r.y) < r.r * r.r){
+          this.bul.splice(j, 1);
+          this.split(i, r);
+          break;
+        }
+      }
+      if (this.safe <= 0 && !this.over){
+        var dx = s.x - r.x, dy = s.y - r.y;
+        if (dx * dx + dy * dy < (r.r + 4) * (r.r + 4)){ this.split(i, r); this.hurt(); }
+      }
+    }
+    if (!this.rocks.length && !this.over) this.spawnWave();
+  };
+
+  this.split = function(i, r){
+    this.rocks.splice(i, 1);
+    this.score += r.r > 10 ? 20 : (r.r > 6 ? 50 : 100);
+    for (var k = 0; k < 8; k++)
+      this.bits.push({ x:r.x, y:r.y, vx:(Math.random()-0.5)*2.4, vy:(Math.random()-0.5)*2.4, life:18 });
+    if (r.r > 6){
+      var nr = r.r > 10 ? 8 : 5;
+      for (var m = 0; m < 2; m++) this.rocks.push(rock(r.x, r.y, nr));
+    }
+  };
+
+  this.draw = function(){
+    sr(0, 0, W, H, C.black);
+    for (var st = 0; st < 26; st++)
+      sr((rnd(st) * W) | 0, TOP + ((rnd(st + 50) * (H - TOP)) | 0), 1, 1, mix(C.slate, C.mist, rnd(st + 9)));
+
+    var i, k;
+    for (i = 0; i < this.rocks.length; i++){
+      var r = this.rocks[i];
+      for (var pass = -1; pass <= 1; pass++){
+        var ox = pass * W;
+        if (r.x + ox < -r.r - 2 || r.x + ox > W + r.r + 2) continue;
+        var pts = [];
+        for (k = 0; k < r.shape.length; k++){
+          var ang = r.ang + k / r.shape.length * 6.283;
+          pts.push([r.x + ox + Math.cos(ang) * r.r * r.shape[k], r.y + Math.sin(ang) * r.r * r.shape[k]]);
+        }
+        fillPoly(pts, mix(C.slate, C.grey, 0.65));
+        for (k = 0; k < pts.length; k++) sr(pts[k][0], pts[k][1], 1, 1, C.mist);
+        sr(r.x + ox - 1, r.y - 2, 2, 2, mix(C.slate, C.black, 0.4));
+      }
+    }
+    for (i = 0; i < this.bits.length; i++)
+      sr(this.bits[i].x, this.bits[i].y, 1, 1, this.bits[i].life > 12 ? C.gold : C.rust);
+    for (i = 0; i < this.bul.length; i++)
+      sr(this.bul[i].x, this.bul[i].y, 2, 2, C.paper);
+
+    if (!this.over && (this.safe <= 0 || Math.floor(now / 90) % 2)){
+      var s = this.ship;
+      fillPoly([
+        [s.x + Math.cos(s.a) * 7,          s.y + Math.sin(s.a) * 7],
+        [s.x + Math.cos(s.a + 2.5) * 6,    s.y + Math.sin(s.a + 2.5) * 6],
+        [s.x + Math.cos(s.a - 2.5) * 6,    s.y + Math.sin(s.a - 2.5) * 6]
+      ], C.cyan);
+    }
+
+    gameBar(this);
+    for (i = 0; i < this.lives; i++) sr(6 + i * 6, 149, 4, 4, C.cyan);
+    textRight("wave " + this.wave, W - 6, 148, C.grey);
+    if (this.over) gameOverCard(this);
+  };
+}
+
+/* ---------------- BREAKOUT ---------------- */
+function Brick(){
+  var TOP = 16, COLS = 10, ROWS = 5, BW = 22, BH = 7, OX = 5, OY = 30;
+  this.id = "brick"; this.name = "BREAKOUT"; this.usesB = false;
+
+  this.reset = function(){
+    this.bricks = [];
+    for (var r = 0; r < ROWS; r++)
+      for (var c = 0; c < COLS; c++)
+        this.bricks.push({ x:OX + c * BW, y:OY + r * BH * 1.6, alive:true, row:r });
+    this.pad = { x:W / 2, w:34 };
+    this.score = 0; this.lives = 3; this.over = false;
+    this.stuck = true;
+    this.ball = { x:W / 2, y:132, vx:1.5, vy:-1.7, r:2 };
+  };
+
+  this.press = function(k){ if (k === "a") this.stuck = false; };
+
+  this.update = function(dt){
+    var dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    this.pad.x += dir * 2.6 * dt;
+    this.pad.x = Math.max(this.pad.w / 2, Math.min(W - this.pad.w / 2, this.pad.x));
+
+    var b = this.ball;
+    if (this.stuck){ b.x = this.pad.x; b.y = 132; return; }
+
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.x < 2){ b.x = 2; b.vx = Math.abs(b.vx); }
+    if (b.x > W - 2){ b.x = W - 2; b.vx = -Math.abs(b.vx); }
+    if (b.y < TOP + 2){ b.y = TOP + 2; b.vy = Math.abs(b.vy); }
+
+    if (b.y > 134 && b.y < 140 && b.vy > 0 &&
+        Math.abs(b.x - this.pad.x) < this.pad.w / 2 + 2){
+      b.vy = -Math.abs(b.vy);
+      b.vx += (b.x - this.pad.x) * 0.075;
+      b.vx = Math.max(-2.6, Math.min(2.6, b.vx));
+    }
+
+    if (b.y > H){
+      this.lives--;
+      this.stuck = true;
+      b.vx = 1.5; b.vy = -1.7;
+      if (this.lives <= 0) endGame(this);
+      return;
+    }
+
+    var live = 0;
+    for (var i = 0; i < this.bricks.length; i++){
+      var k = this.bricks[i];
+      if (!k.alive) continue;
+      live++;
+      if (b.x > k.x - 1 && b.x < k.x + BW - 1 && b.y > k.y - 1 && b.y < k.y + BH){
+        k.alive = false;
+        this.score += (ROWS - k.row) * 5;
+        var ox = Math.min(Math.abs(b.x - k.x), Math.abs(b.x - (k.x + BW)));
+        var oy = Math.min(Math.abs(b.y - k.y), Math.abs(b.y - (k.y + BH)));
+        if (oy < ox) b.vy = -b.vy; else b.vx = -b.vx;
+        b.vx *= 1.012; b.vy *= 1.012;
+        live--;
+        break;
+      }
+    }
+    if (!live){
+      for (var j = 0; j < this.bricks.length; j++) this.bricks[j].alive = true;
+      this.stuck = true;
+      b.vx *= 1.1; b.vy *= 1.1;
+      this.score += 50;
+    }
+  };
+
+  this.draw = function(){
+    sr(0, 0, W, H, C.black);
+    sr(0, TOP, W, H - TOP, mix(C.night, C.black, 0.6));
+    var cols = [C.red, C.rust, C.gold, C.moss, C.cyan];
+    for (var i = 0; i < this.bricks.length; i++){
+      var k = this.bricks[i];
+      if (!k.alive) continue;
+      sr(k.x, k.y, BW - 2, BH - 2, cols[k.row]);
+      sr(k.x, k.y, BW - 2, 1, mix(cols[k.row], C.paper, 0.4));
+    }
+    sr(this.pad.x - this.pad.w / 2, 136, this.pad.w, 4, C.mist);
+    sr(this.pad.x - this.pad.w / 2, 136, this.pad.w, 1, C.paper);
+    sr(this.ball.x - 2, this.ball.y - 2, 4, 4, C.gold);
+
+    gameBar(this);
+    for (var l = 0; l < this.lives; l++) sr(6 + l * 6, 149, 4, 4, C.gold);
+    if (this.stuck && !this.over) textCentre("Space  serve", W / 2, 146, C.haze);
+    if (this.over) gameOverCard(this);
+  };
+}
+
+function startGame(id){
+  G = id === "snake" ? new Snake() : (id === "roids" ? new Roids() : new Brick());
+  G.reset();
+  mode = "game";
+  syncPad();
+}
+
+/* ===============================================================
+   16e. THE END OF THE ROAD
+   =============================================================== */
+function clock(ms){
+  var s = Math.floor(ms / 1000), m = Math.floor(s / 60);
+  return m + ":" + ("0" + (s % 60)).slice(-2);
+}
+function ridesCount(){
+  var n = 0;
+  for (var k in ridesUsed) if (ridesUsed[k]) n++;
+  return n;
+}
+function drawEnd(){
+  sr(0, 0, W, H, C.black);
+  panel(2, 2, W - 4, H - 4, C.ink, C.gold);
+  sr(3, 3, W - 6, 12, C.slate);
+  text("THE END OF THE ROAD", 7, 4, C.gold);
+
+  var full = seenCount() === SECTIONS.length;
+  textCentre(full ? "You read the whole thing." : "You made it to the flag.", W / 2, 24, C.paper);
+
+  var rows = [
+    ["time",     clock(now - runStart)],
+    ["stops read", seenCount() + " of " + SECTIONS.length],
+    ["floppies",  disksFound() + " of " + DISKS.length],
+    ["rides used", ridesCount() + " of " + VEHICLES.length]
+  ];
+  for (var i = 0; i < rows.length; i++){
+    var y = 44 + i * 12;
+    text(rows[i][0], 40, y, C.haze);
+    textRight(rows[i][1], W - 40, y, C.mist);
+  }
+
+  var line = disksFound() === DISKS.length
+    ? "Every floppy found. There is one more stop past this flag."
+    : "There are " + (DISKS.length - disksFound()) + " floppies still out there.";
+  var wl = wrap(line, 34);
+  for (i = 0; i < wl.length && i < 2; i++) textCentre(wl[i], W / 2, 98 + i * 10, C.gold);
+
+  textCentre("Thanks for playing.", W / 2, 120, C.cyan);
+  textCentre("Stop 09 has his address on it.", W / 2, 131, C.haze);
+  sr(3, H - 15, W - 6, 12, C.shadow);
+  text("Space  stay", 7, H - 14, C.haze);
+  textRight("Esc  the page", W - 7, H - 14, C.haze);
+}
+
 /* ---------------------------------------------------------------
    17. STARTING, AND GOING BACK TO THE PAGE
    --------------------------------------------------------------- */
@@ -1522,7 +2328,9 @@ function standingAt(){
     var d = Math.abs(P.x - STATIONS[i].x);
     if (d < bestD){ bestD = d; best = i; }
   }
-  return (bestD < 200 && best >= 0) ? SECTIONS[best].id : "";
+  if (bestD >= 200 || best < 0) return "";
+  var id = STATIONS[best].sec.id;
+  return id === "secret" ? "" : id;
 }
 
 /* leaving hands the page whichever stop you were standing next to */
@@ -1543,6 +2351,11 @@ function start(){
 
   if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches && padEl) padEl.classList.add("on");
 
+  runStart = performance.now();
+  endShown = false;
+  trail = [];
+  ridesUsed = {};
+
   running = true;
   mode = reduceMotion ? "world" : "intro";
   now = performance.now(); last = now;
@@ -1559,6 +2372,9 @@ function start(){
 btnExit.addEventListener("click", function(e){ e.preventDefault(); goPage(); });
 btnMap.addEventListener("click", function(){
   if (!running) return;
+  if (mode === "game"){ mode = "room"; syncPad(); cv.focus(); return; }
+  if (mode === "room"){ leaveRoom(); cv.focus(); return; }
+  if (mode === "end"){ mode = "world"; syncPad(); cv.focus(); return; }
   if (mode === "map") mode = "world";
   else { mapSel = Math.max(0, nearStation()); mode = "map"; }
   syncPad(); cv.focus();
