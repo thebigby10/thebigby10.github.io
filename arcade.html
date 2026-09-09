@@ -140,6 +140,8 @@ a.modesw-b:hover{color:#fff;background:#221f31;}
           aria-label="Pixel-art side-scrolling view of the portfolio"></canvas>
 
   <div class="play-chrome">
+    <button type="button" class="pbtn" id="pb-save" hidden>Save run</button>
+    <button type="button" class="pbtn" id="pb-snd" aria-pressed="false">Mute</button>
     <button type="button" class="pbtn" id="pb-map">Map</button>
     <button type="button" class="pbtn" id="pb-help">Keys</button>
     <div class="modesw" aria-label="Reading mode">
@@ -559,9 +561,81 @@ var camX = 0, camY = 0;
 /* ---------------------------------------------------------------
    6. DRAW HELPERS
    --------------------------------------------------------------- */
+/* Transitions. Rather than touching every mode = "..." site, the loop
+   notices the mode changed and runs a short blind-wipe over the top.
+   bootT gives the intro a CRT coming on. */
+var wipe = 0, lastMode = "", bootT = 0;
+function drawWipe(dt){
+  if (wipe <= 0) return;
+  wipe -= dt;
+  var band = Math.ceil(Math.max(0, wipe / 9) * 8);
+  if (band <= 0) return;
+  for (var y = 0; y < H; y += 8) sr(0, y, W, band, C.black);
+}
+function drawBoot(dt){
+  if (bootT <= 0) return;
+  bootT -= dt;
+  var t = Math.max(0, bootT / 26);
+  var h = Math.round((1 - t) * (H / 2));
+  sr(0, 0, W, H / 2 - h, C.black);
+  sr(0, H / 2 + h, W, H / 2 - h + 1, C.black);
+  if (h < H / 2){
+    sr(0, H / 2 - h - 1, W, 1, C.paper);
+    sr(0, H / 2 + h, W, 1, C.paper);
+  }
+}
+
+/* Particles. One flat array, world coordinates, drawn through wr() so
+   they shake and scroll with everything else. Capped, because a pixel
+   at a time is cheap but not free. */
+var parts = [], PART_MAX = 130;
+function spawn(x, y, n, col, kind){
+  if (reduceMotion) return;
+  for (var i = 0; i < n && parts.length < PART_MAX; i++){
+    var a = Math.random() * Math.PI * 2, sp = Math.random();
+    parts.push({
+      x:x, y:y,
+      vx: kind === "dust" ? (Math.random() * 2 - 1) * 0.8 : Math.cos(a) * sp * 1.4,
+      vy: kind === "dust" ? -Math.random() * 0.5 : (kind === "jet" ? Math.random() * 1.2 + 0.3 : Math.sin(a) * sp * 1.4),
+      g:  kind === "jet" ? 0.01 : 0.06,
+      t:  14 + Math.random() * 14,
+      col: col
+    });
+  }
+}
+function stepParts(dt){
+  for (var i = parts.length - 1; i >= 0; i--){
+    var q = parts[i];
+    q.x += q.vx * dt; q.y += q.vy * dt; q.vy += q.g * dt;
+    q.t -= dt;
+    if (q.t <= 0) parts.splice(i, 1);
+  }
+}
+function drawParts(){
+  for (var i = 0; i < parts.length; i++){
+    var q = parts[i];
+    if (q.x - camX < -8 || q.x - camX > W + 8) continue;
+    wr(q.x, q.y, q.t > 8 ? 2 : 1, q.t > 8 ? 2 : 1, q.col);
+  }
+}
+
+/* Screen shake. Every world pixel goes through wr(), so folding the
+   offset in here is the whole feature - nothing else has to know. */
+var shakeMag = 0, shakeX = 0, shakeY = 0;
+function shake(m){
+  if (reduceMotion) return;
+  shakeMag = Math.min(5, Math.max(shakeMag, m));
+}
+function stepShake(dt){
+  if (shakeMag <= 0.05){ shakeMag = 0; shakeX = 0; shakeY = 0; return; }
+  shakeX = (Math.random() * 2 - 1) * shakeMag;
+  shakeY = (Math.random() * 2 - 1) * shakeMag;
+  shakeMag *= Math.pow(0.82, dt);
+}
+
 function wr(x, y, w, h, col){
   ctx.fillStyle = col;
-  ctx.fillRect(Math.round(x - camX), Math.round(y - camY), w, h);
+  ctx.fillRect(Math.round(x - camX + shakeX), Math.round(y - camY + shakeY), w, h);
 }
 function sr(x, y, w, h, col){ ctx.fillStyle = col; ctx.fillRect(x | 0, y | 0, w, h); }
 
@@ -656,6 +730,28 @@ function drawHills(t){
 }
 
 /* a low skyline of workplaces behind the mid hills */
+/* A band of weather across the middle of the run. Stars and the moon
+   were already up there in drawSky; this is the part that was not. */
+function rainAmount(t){
+  if (reduceMotion) return 0;
+  if (t <= 0.30 || t >= 0.58) return 0;
+  return Math.min(1, (t - 0.30) / 0.07, (0.58 - t) / 0.07);
+}
+function drawRain(t){
+  var r = rainAmount(t);
+  if (r <= 0) return;
+  ctx.fillStyle = "rgba(27,42,68,.20)";
+  ctx.fillRect(0, 0, W, H);
+  var n = Math.round(85 * r), i;
+  for (i = 0; i < n; i++){
+    var sp = 3.4 + rnd(i + 11) * 2.6;
+    var x = (rnd(i) * (W + 140) - camX * 0.8 - now * 0.035) % (W + 40);
+    if (x < 0) x += W + 40;
+    var y = (rnd(i + 40) * (H + 70) + now * sp * 0.055) % (H + 30);
+    sr(x - 20, y - 16, 1, 3, mix(C.sky, C.mist, rnd(i + 70)));
+  }
+}
+
 function drawSkyline(t){
   var col = mix(C.ink, C.shadow, 0.5);
   var lit = mix(C.gold, C.paper, 0.2 - t * 0.2);
@@ -853,6 +949,66 @@ function drawStations(t){
   }
 }
 
+/* ---------------------------------------------------------------
+   8b. SOMEONE AT EVERY STOP
+   A figure beside each monument with a line to say. The line is the
+   stop's own lead paragraph out of index.html, trimmed to its first
+   sentence, so nobody here says anything the page does not.
+   --------------------------------------------------------------- */
+function barkFor(sec){
+  var t = String(sec.lead || "").trim();
+  if (!t) return "";
+  var cut = t.indexOf(". ");
+  if (cut > 8) t = t.slice(0, cut + 1);
+  if (t.length > 74) t = t.slice(0, 71) + "...";
+  return t;
+}
+
+function drawNPCs(){
+  for (var i = 0; i < STATIONS.length; i++){
+    var s = STATIONS[i];
+    if (s.secret) continue;
+    var bark = barkFor(s.sec);
+    if (!bark) continue;
+
+    var x = s.x - 36;
+    if (x - camX < -60 || x - camX > W + 60) continue;
+    var g = Math.round(terrain(x));
+    var near = Math.abs(P.x - x) < 46;
+    var bob = (reduceMotion || !near) ? 0 : Math.round(Math.sin(now / 260 + i) * 1);
+
+    /* a different build and palette to the rider, so it reads as someone else */
+    var y = g + bob;
+    wr(x - 3, y - 20, 6, 5, C.rust);           /* hair */
+    wr(x - 2, y - 16, 5, 4, C.mist);           /* face */
+    wr(x + 1, y - 15, 1, 1, C.ink);
+    wr(x - 3, y - 12, 6, 7, C.moss);           /* coat */
+    wr(x - 3, y - 11, 6, 1, C.cyan);
+    wr(x - 3, y - 5, 2, 5, C.slate);           /* legs */
+    wr(x + 1, y - 5, 2, 5, C.slate);
+
+    if (!near) continue;
+
+    var lines = wrap(bark, 26);
+    if (lines.length > 2){ lines = lines.slice(0, 2); lines[1] = lines[1].slice(0, 23) + "..."; }
+    var w = 0, j;
+    for (j = 0; j < lines.length; j++) w = Math.max(w, textWidth(lines[j]));
+    var bw = w + 10, bh = lines.length * LINE_H + 7;
+    var bx = Math.round(x - bw / 2 - camX), by = Math.round(y - 26 - bh - camY);
+    if (bx < 2) bx = 2;
+    if (bx + bw > W - 2) bx = W - 2 - bw;
+
+    sr(bx, by, bw, bh, C.ink);
+    sr(bx, by, bw, 1, C.slate);
+    sr(bx, by + bh - 1, bw, 1, C.slate);
+    sr(bx - 1, by + 1, 1, bh - 2, C.slate);
+    sr(bx + bw, by + 1, 1, bh - 2, C.slate);
+    sr(Math.round(x - camX) - 1, by + bh, 3, 3, C.ink);   /* tail */
+    for (j = 0; j < lines.length; j++)
+      text(lines[j], bx + 5, by + 4 + j * LINE_H, C.mist);
+  }
+}
+
 /* start and finish markers */
 function drawEnds(){
   var g0 = Math.round(terrain(40));
@@ -985,6 +1141,119 @@ function drawPlayer(){
 }
 
 /* ---------------------------------------------------------------
+   9b. SOUND
+   Oscillators only. There is no audio file here either, for the
+   same reason there is no image file. The context is built on the
+   first key or tap, because a browser will not let a page make a
+   noise before it has been touched.
+   --------------------------------------------------------------- */
+function getPref(k, d){
+  try { var v = window.localStorage.getItem("arcade." + k); return v === null ? d : v; }
+  catch(e){ return d; }
+}
+function setPref(k, v){
+  try { window.localStorage.setItem("arcade." + k, String(v)); } catch(e){}
+}
+
+var actx = null, master = null, drone = null, droneGain = null, droneFilt = null;
+var muted = getPref("mute", "0") === "1";
+var btnSnd = doc.getElementById("pb-snd");
+
+/* name: [wave, from, to, seconds, volume] */
+var SFX = {
+  jump:  ["square",   220, 660, 0.12, 0.20],
+  hop:   ["square",   300, 700, 0.09, 0.16],
+  land:  ["triangle", 190,  80, 0.08, 0.18],
+  pick:  ["square",   660,1320, 0.16, 0.20],
+  card:  ["square",   440, 880, 0.06, 0.14],
+  close: ["square",   880, 440, 0.06, 0.12],
+  menu:  ["square",   520, 520, 0.04, 0.10],
+  ride:  ["square",   330, 550, 0.10, 0.16],
+  hit:   ["sawtooth", 300,  80, 0.14, 0.20],
+  die:   ["square",   400,  60, 0.45, 0.22],
+  point: ["square",   880,1180, 0.07, 0.16]
+};
+
+function ensureAudio(){
+  if (actx || muted) return;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try { actx = new AC(); } catch(e){ actx = null; return; }
+  master = actx.createGain();
+  master.gain.value = 0.5;
+  master.connect(actx.destination);
+}
+
+function sfx(name, vol){
+  if (muted) return;
+  ensureAudio();
+  if (!actx || !SFX[name]) return;
+  if (actx.state === "suspended") actx.resume();
+  var s = SFX[name], t = actx.currentTime;
+  var o = actx.createOscillator(), g = actx.createGain();
+  o.type = s[0];
+  o.frequency.setValueAtTime(s[1], t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20, s[2]), t + s[3]);
+  g.gain.setValueAtTime(s[4] * (vol === undefined ? 1 : vol), t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + s[3]);
+  o.connect(g); g.connect(master);
+  o.start(t); o.stop(t + s[3] + 0.02);
+}
+
+/* a short run of notes, for the flag and the last floppy */
+function fanfare(notes){
+  if (muted) return;
+  ensureAudio();
+  if (!actx) return;
+  if (actx.state === "suspended") actx.resume();
+  for (var i = 0; i < notes.length; i++){
+    var t = actx.currentTime + i * 0.11;
+    var o = actx.createOscillator(), g = actx.createGain();
+    o.type = "square";
+    o.frequency.setValueAtTime(notes[i], t);
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.2);
+  }
+}
+
+/* the engine under the bike, the kart and the jetpack */
+function engine(speed, id){
+  if (muted || !actx) return;
+  var want = (id === "kart" || id === "bike" || id === "jet") ? Math.min(1, speed) : 0;
+  if (!drone){
+    drone = actx.createOscillator();
+    droneFilt = actx.createBiquadFilter();
+    droneGain = actx.createGain();
+    drone.type = "sawtooth";
+    droneFilt.type = "lowpass";
+    droneFilt.frequency.value = 900;
+    droneGain.gain.value = 0;
+    drone.connect(droneFilt); droneFilt.connect(droneGain); droneGain.connect(master);
+    drone.start();
+  }
+  var base = id === "jet" ? 90 : (id === "kart" ? 60 : 110);
+  var t = actx.currentTime;
+  drone.frequency.setTargetAtTime(base + want * (id === "jet" ? 130 : 90), t, 0.08);
+  droneGain.gain.setTargetAtTime(want * (id === "jet" ? 0.10 : 0.07), t, 0.08);
+}
+
+function setMuted(m){
+  muted = m;
+  setPref("mute", m ? "1" : "0");
+  if (m && droneGain && actx) droneGain.gain.setTargetAtTime(0, actx.currentTime, 0.05);
+  if (btnSnd){
+    btnSnd.textContent = m ? "Sound" : "Mute";
+    btnSnd.setAttribute("aria-pressed", m ? "true" : "false");
+  }
+}
+if (btnSnd){
+  setMuted(muted);
+  btnSnd.addEventListener("click", function(){ setMuted(!muted); if (!muted) sfx("menu"); cv.focus(); });
+}
+
+/* ---------------------------------------------------------------
    10. STATE AND INPUT
    --------------------------------------------------------------- */
 var now = 0, last = 0, raf = 0, running = false;
@@ -1013,7 +1282,8 @@ function setVehicle(i, quiet){
   P.veh = (i + VEHICLES.length) % VEHICLES.length;
   P.bounce = 0;
   ridesUsed[VEHICLES[P.veh].id] = true;
-  if (!quiet) say(VEHICLES[P.veh].name + " \u00b7 " + VEHICLES[P.veh].hint);
+  if (drone && droneGain && actx) droneGain.gain.setTargetAtTime(0, actx.currentTime, 0.03);
+  if (!quiet){ sfx("ride"); say(VEHICLES[P.veh].name + " \u00b7 " + VEHICLES[P.veh].hint); }
 }
 
 /* ---------------------------------------------------------------
@@ -1066,6 +1336,7 @@ function buildCard(si, ci){
   if (!pages.length) pages.push([]);
 
   sec.seen = true;
+  markRead(sec.id);
   var sparse = !lines.length && !c.intro;
   card = {
     sparse:sparse,
@@ -1079,6 +1350,7 @@ function openStation(si){
   buildCard(si, 0);
   mode = "card";
   syncPad();
+  sfx("card");
 }
 
 function cardMove(d){
@@ -1121,6 +1393,7 @@ function step(dt){
   if (P.y < 26) { P.y = 26; P.vy = 0; }
 
   /* ledges catch you from above only, so nothing can trap you under one */
+  var wasAir = !P.onGround, impact = P.vy;
   var landed = false;
   if (P.vy >= 0){
     for (var pi = 0; pi < PLATFORMS.length; pi++){
@@ -1147,8 +1420,25 @@ function step(dt){
     P.onGround = false;
   }
 
+  if (P.onGround && wasAir && impact > 0.6){
+    sfx(v.bounce ? "hop" : "land", Math.min(1, impact / 3.2));
+    if (impact > 2.2) shake(Math.min(3, (impact - 2.2) * 1.6));
+    spawn(P.x, P.y - 1, impact > 2.2 ? 8 : 4, C.grey, "dust");
+  }
+  /* the kart rattles once it is really moving */
+  if (v.id === "kart" && Math.abs(P.vx) > v.max * 0.88 && P.onGround){
+    shake(0.5);
+    if (Math.random() < 0.4) spawn(P.x - P.face * 6, P.y - 2, 1, C.gold, "dust");
+  }
+  if (v.fly && keys.a && Math.random() < 0.7) spawn(P.x, P.y - 4, 1, C.rust, "jet");
+  engine(Math.abs(P.vx) / Math.max(0.01, v.max), v.id);
+
   grabDisks();
-  if (!endShown && P.x > FLAG_X - 8){ endShown = true; mode = "end"; syncPad(); }
+  if (!endShown && P.x > FLAG_X - 8){
+    endShown = true; mode = "end"; syncPad();
+    shake(2.5);
+    fanfare([523, 659, 784, 1047]);
+  }
   if (konami && !reduceMotion && Math.abs(P.vx) > 0.2){
     trail.push({ x:P.x, y:P.y - 10, t:26 });
     if (trail.length > 70) trail.shift();
@@ -1298,9 +1588,30 @@ function drawMap(){
     if (r.sec && r.sec.seen) text("\u2713", W - 18, y, C.moss);
     if (!r.sec) text(disksFound() + "/" + DISKS.length, W - 34, y, C.cyan);
   }
+  var want = ridesWanted();
+  if (want) textCentre(want, W / 2, H - 27, C.gold);
+
   sr(3, H - 15, W - 6, 12, C.shadow);
   text("\u25b2 \u25bc choose", 7, H - 14, C.haze);
   textRight("Space go  \u00b7  Esc back", W - 7, H - 14, C.haze);
+}
+
+/* which rides the floppies still out there are asking for */
+function ridesWanted(){
+  var need = {}, any = false, i, d;
+  for (i = 0; i < DISKS.length; i++){
+    d = DISKS[i];
+    if (d.got || !d.ride) continue;
+    need[d.ride] = (need[d.ride] || 0) + 1;
+    any = true;
+  }
+  if (!any) return "";
+  var parts = [];
+  for (i = 0; i < VEHICLES.length; i++){
+    var v = VEHICLES[i];
+    if (need[v.id]) parts.push(v.name.toLowerCase() + " " + need[v.id]);
+  }
+  return "still up there: " + parts.join(", ");
 }
 
 function drawHelp(){
@@ -1355,6 +1666,13 @@ function frame(ts){
   var dt = Math.min(3, (ts - last) / 16.6667) || 1;
   last = ts;
 
+  if (mode !== lastMode){
+    if (lastMode && !reduceMotion) wipe = 9;
+    if (mode === "end") noteRun(now - runStart);
+    lastMode = mode;
+  }
+  stepShake(dt);
+  stepParts(dt);
   if (mode === "world"){
     step(dt);
     var nn = nearStation() >= 0;
@@ -1390,7 +1708,10 @@ function frame(ts){
     var q = trail[tr];
     wr(q.x, q.y, 2, 2, [C.red, C.gold, C.moss, C.cyan, C.mist][tr % 5]);
   }
+  drawNPCs();
+  drawParts();
   drawPlayer();
+  drawRain(Math.min(1, P.x / LEVEL));
   drawHud();
 
   if (mode === "card") drawCard();
@@ -1401,6 +1722,9 @@ function frame(ts){
     drawIntro();
     if (now > introUntil) { mode = "world"; hintUntil = now + 7000; }
   }
+
+  drawWipe(dt);
+  drawBoot(dt);
 
   /* a soft vignette keeps the little screen feeling like a screen */
   ctx.fillStyle = "rgba(10,9,16,.16)";
@@ -1423,22 +1747,23 @@ function press(k){
       else if (card.ci < card.sec.cards.length - 1) cardMove(1);
     }
     if (k === "up") card.page = Math.max(0, card.page - 1);
-    if (k === "b" || k === "back"){ mode = "world"; card = null; syncPad(); }
+    if (k === "b" || k === "back"){ mode = "world"; card = null; syncPad(); sfx("close"); }
     return;
   }
 
   if (mode === "map"){
-    if (k === "up")   mapSel = (mapSel + MAPROWS.length - 1) % MAPROWS.length;
-    if (k === "down") mapSel = (mapSel + 1) % MAPROWS.length;
+    if (k === "up")   { mapSel = (mapSel + MAPROWS.length - 1) % MAPROWS.length; sfx("menu"); }
+    if (k === "down") { mapSel = (mapSel + 1) % MAPROWS.length; sfx("menu"); }
     if (k === "a"){
       var row = MAPROWS[mapSel];
       P.x = row.x;
       P.y = terrain(P.x); P.vx = 0; P.vy = 0;
       camX = Math.max(0, Math.min(LEVEL - W, P.x - 108));
       mode = "world"; syncPad();
+      sfx("point");
       say("Arrived at " + row.name.toLowerCase());
     }
-    if (k === "b" || k === "back"){ mode = "world"; syncPad(); }
+    if (k === "b" || k === "back"){ mode = "world"; syncPad(); sfx("close"); }
     return;
   }
 
@@ -1479,9 +1804,12 @@ function press(k){
     var ns = nearStation();
     if (ns >= 0) { openStation(ns); return; }
     if (nearArcade()){ enterRoom(); return; }
-    if (nearFlag()){ mode = "end"; syncPad(); return; }
+    if (nearFlag()){ mode = "end"; syncPad(); fanfare([523, 659, 784, 1047]); return; }
     var v = VEHICLES[P.veh];
-    if (P.onGround && v.jump > 0) { P.vy = -v.jump; P.onGround = false; }
+    if (P.onGround && v.jump > 0) {
+      P.vy = -v.jump; P.onGround = false;
+      sfx(v.id === "bike" ? "hop" : "jump");
+    }
     return;
   }
   if (k === "up"){
@@ -1495,6 +1823,7 @@ function press(k){
 }
 
 function syncPad(){
+  if (btnSave) btnSave.hidden = (mode !== "end");
   if (!padA) return;
   if (btnMap) btnMap.textContent = (mode === "room" || mode === "game" || mode === "end") ? "Back" : "Map";
   if (mode === "room"){ padA.textContent = room.door ? "Out" : (room.sel >= 0 ? "Play" : "\u2014"); padB.textContent = "Out"; }
@@ -1552,6 +1881,10 @@ function onKeyDown(e){
   if (k === "Shift" || k === "v" || k === "V"){ if (!e.repeat) press("b"); e.preventDefault(); return; }
   if (k === "Escape"){
     if (mode === "world") goPage(); else press("back");
+    e.preventDefault(); return;
+  }
+  if (k === "s" || k === "S"){
+    if (mode === "end") saveShot();
     e.preventDefault(); return;
   }
   if (k === "m" || k === "M"){
@@ -1691,12 +2024,17 @@ function layoutExtras(){
     { x:4460, y: 84, w: 38 }, { x:4520, y: 58, w: 26 }
   ];
 
-  /* twelve floppies: a few in plain sight, most needing the right ride */
+  /* Twelve floppies. Three of them hang over open ground at heights
+     no amount of walking will reach, so the ride you pick matters.
+     A floppy is caught anywhere along the arc, not just at the apex,
+     and the terrain bulges up to y=116 between stops, so the cutoffs
+     are taken from the worst case: on foot you can touch y>69, on the
+     pogo y>58, and the jetpack reaches the y=26 ceiling. */
   DISKS = [
     { x:  58, y: 0 },  { x: 706, y: 86 }, { x: 766, y: 64 },
-    { x:1180, y: 0 },  { x:1500, y: 78 }, { x:2352, y: 40 },
-    { x:2900, y: 34 }, { x:3052, y: 82 }, { x:3874, y: 58 },
-    { x:4200, y: 0 },  { x:4532, y: 48 }, { x:LEVEL - 66, y: 0 }
+    { x:1180, y: 66, ride:"pogo" },       { x:1500, y: 78 }, { x:2352, y: 40 },
+    { x:2900, y: 44, ride:"jet" },        { x:3052, y: 82 }, { x:3874, y: 58 },
+    { x:4200, y: 66, ride:"pogo" },       { x:4532, y: 48 }, { x:LEVEL - 66, y: 0 }
   ];
   for (var i = 0; i < DISKS.length; i++){
     if (!DISKS[i].y) DISKS[i].y = terrain(DISKS[i].x) - 10;
@@ -1711,6 +2049,35 @@ function layoutExtras(){
   for (i = 0; i < SECTIONS.length; i++)
     MAPROWS.push({ no:SECTIONS[i].no, name:SECTIONS[i].name, x:STATIONS[i].x - 30, sec:SECTIONS[i] });
   MAPROWS.push({ no:"\u25b6", name:"The arcade", x:ARCADE_X - 26, sec:null });
+}
+
+/* ---- what carries over between visits ----
+   Deliberately records, not world state: coming back should not hand
+   you a level with the floppies already gone. What persists is what
+   you have read, your fastest run, and your best haul. */
+function readIds(){
+  var raw = getPref("read", "");
+  return raw ? raw.split(",") : [];
+}
+function markRead(id){
+  if (!id || id === "secret") return;
+  var have = readIds();
+  if (have.indexOf(id) >= 0) return;
+  have.push(id);
+  setPref("read", have.join(","));
+}
+function readCount(){
+  var have = readIds(), n = 0;
+  for (var i = 0; i < SECTIONS.length; i++)
+    if (have.indexOf(SECTIONS[i].id) >= 0) n++;
+  return n;
+}
+function bestTime(){ return parseInt(getPref("besttime", "0"), 10) || 0; }
+function noteRun(ms){
+  var b = bestTime();
+  if (!b || ms < b) setPref("besttime", Math.round(ms));
+  var d = parseInt(getPref("bestdisks", "0"), 10) || 0;
+  if (disksFound() > d) setPref("bestdisks", disksFound());
 }
 
 function disksFound(){
@@ -1754,6 +2121,8 @@ function grabDisks(){
     if (Math.abs(d.x - P.x) < 11 && Math.abs(d.y - (P.y - 10)) < 14){
       d.got = true;
       var n = disksFound();
+      spawn(d.x, d.y, 10, C.cyan, "pop");
+      if (n === DISKS.length) fanfare([659, 784, 988, 1319]); else sfx("pick");
       say(n === DISKS.length ? "Every floppy found" : "Floppy  " + n + "/" + DISKS.length);
     }
   }
@@ -1784,9 +2153,10 @@ function drawArcade(){
    =============================================================== */
 var room = { x:120, vx:0, face:1, anim:0, sel:-1, door:false };
 var CABS = [
-  { id:"snake", name:"SNAKE",     x: 56, col:C.moss },
-  { id:"roids", name:"ASTEROIDS", x:120, col:C.cyan },
-  { id:"brick", name:"BREAKOUT",  x:184, col:C.red  }
+  { id:"snake", name:"SNAKE",     x: 38, col:C.moss },
+  { id:"roids", name:"ASTEROIDS", x: 92, col:C.cyan },
+  { id:"brick", name:"BRICKS",    x:146, col:C.red  },
+  { id:"stack", name:"STACK",     x:200, col:C.gold }
 ];
 
 function enterRoom(){
@@ -1861,6 +2231,9 @@ function drawRoom(){
     } else if (c.id === "roids"){
       sr(x - 9 + (ph % 18), WALL - 37, 3, 3, c.col);
       sr(x + 6 - (ph % 16), WALL - 31, 2, 2, C.mist);
+    } else if (c.id === "stack"){
+      for (var t2 = 0; t2 < 3; t2++)
+        sr(x - 8, WALL - 39 + t2 * 4, ((ph + t2 * 2) % 5) * 3 + 4, 2, t2 === 1 ? C.mist : c.col);
     } else {
       for (var k2 = 0; k2 < 5; k2++) sr(x - 9 + k2 * 4, WALL - 39, 3, 2, c.col);
       sr(x - 9 + (ph % 17), WALL - 31, 2, 2, C.mist);
@@ -1892,7 +2265,7 @@ function drawRoom(){
     panel(x2, 144, Math.min(w2, W - 4), 13, C.ink, C.gold);
     text(msg, x2 + 5, 147, C.paper);
   } else {
-    textCentre("three cabinets, one door", W / 2, 147, C.grey);
+    textCentre(CABS.length + " cabinets, one door", W / 2, 147, C.grey);
   }
 }
 
@@ -1921,6 +2294,7 @@ function endGame(g){
   g.newBest = g.score > 0 && g.score > bestOf(g.id);
   setBest(g.id, g.score);
   g.over = true;
+  if (g.newBest) fanfare([659, 784, 988, 1319]); else sfx("die");
 }
 
 function gameBar(g){
@@ -1982,7 +2356,7 @@ function Snake(){
     for (var i = 0; i < this.body.length - 1; i++)
       if (this.body[i].x === h.x && this.body[i].y === h.y){ this.die(); return; }
     this.body.unshift(h);
-    if (h.x === this.food.x && h.y === this.food.y){ this.score += 10; this.food = freeCell(); }
+    if (h.x === this.food.x && h.y === this.food.y){ this.score += 10; this.food = freeCell(); sfx("point"); }
     else this.body.pop();
   };
 
@@ -2119,6 +2493,7 @@ function Roids(){
   this.split = function(i, r){
     this.rocks.splice(i, 1);
     this.score += r.r > 10 ? 20 : (r.r > 6 ? 50 : 100);
+    sfx("hit");
     for (var k = 0; k < 8; k++)
       this.bits.push({ x:r.x, y:r.y, vx:(Math.random()-0.5)*2.4, vy:(Math.random()-0.5)*2.4, life:18 });
     if (r.r > 6){
@@ -2166,6 +2541,123 @@ function Roids(){
     for (i = 0; i < this.lives; i++) sr(6 + i * 6, 149, 4, 4, C.cyan);
     textRight("wave " + this.wave, W - 6, 148, C.grey);
     if (this.over) gameOverCard(this);
+  };
+}
+
+/* ---------------------------------------------------------------
+   STACK — the fourth cabinet.
+   Its questions are built out of the tags already harvested from
+   index.html, so like everything else here it carries no words of
+   its own and cannot drift from the page.
+   --------------------------------------------------------------- */
+function Stack(){
+  var self = this;
+  this.id = "stack"; this.name = "STACK"; this.usesB = false;
+
+  /* Only tags belonging to exactly one stop can be asked about -
+     FastAPI and Docker turn up all over the page, so a question
+     about them would have more than one right answer. */
+  function buildPool(){
+    var owner = {}, pool = [], i, j, k, t;
+    for (i = 0; i < SECTIONS.length; i++){
+      for (j = 0; j < SECTIONS[i].cards.length; j++){
+        var tg = SECTIONS[i].cards[j].tags || [];
+        for (k = 0; k < tg.length; k++){
+          t = String(tg[k]).trim();
+          if (!t) continue;
+          if (owner[t] === undefined) owner[t] = i;
+          else if (owner[t] !== i) owner[t] = -1;   /* shared, unusable */
+        }
+      }
+    }
+    for (t in owner){
+      if (!Object.prototype.hasOwnProperty.call(owner, t)) continue;
+      if (owner[t] >= 0) pool.push({ tag:t, sec:owner[t] });
+    }
+    return pool;
+  }
+
+  function pick(){
+    if (!self.pool.length) return null;
+    var q = self.pool.splice(Math.floor(Math.random() * self.pool.length), 1)[0];
+    var opts = [q.sec], guard = 0;
+    while (opts.length < 3 && opts.length < SECTIONS.length && guard++ < 60){
+      var r = Math.floor(Math.random() * SECTIONS.length);
+      if (opts.indexOf(r) < 0) opts.push(r);
+    }
+    for (var i = opts.length - 1; i > 0; i--){        /* shuffle */
+      var j = Math.floor(Math.random() * (i + 1)), tmp = opts[i];
+      opts[i] = opts[j]; opts[j] = tmp;
+    }
+    return { tag:q.tag, right:q.sec, opts:opts };
+  }
+
+  this.reset = function(){
+    this.pool = buildPool();
+    this.score = 0; this.over = false; this.sel = 0;
+    this.t = 0; this.flash = 0; this.wrong = -1;
+    this.q = pick();
+    this.thin = !this.q;                 /* page had too few unique tags */
+  };
+
+  this.press = function(k){
+    if (!this.q || this.flash > 0) return;
+    if (k === "up")   { this.sel = (this.sel + this.q.opts.length - 1) % this.q.opts.length; sfx("menu"); }
+    if (k === "down") { this.sel = (this.sel + 1) % this.q.opts.length; sfx("menu"); }
+    if (k === "a"){
+      if (this.q.opts[this.sel] === this.q.right){
+        this.score += 25 + Math.max(0, Math.round(this.t < 0 ? 0 : (TIME - this.t) / 6));
+        this.flash = 10; this.wrong = -1;
+        sfx("point");
+      } else {
+        this.wrong = this.sel; this.flash = 16;
+        sfx("hit");
+      }
+    }
+  };
+
+  var TIME = 300;                        /* frames per question */
+
+  this.update = function(dt){
+    if (this.thin) return;
+    if (this.flash > 0){
+      this.flash -= dt;
+      if (this.flash <= 0){
+        if (this.wrong >= 0){ endGame(this); return; }
+        this.q = pick(); this.sel = 0; this.t = 0;
+        if (!this.q){ endGame(this); return; }   /* ran the page dry: a win */
+      }
+      return;
+    }
+    this.t += dt;
+    if (this.t >= TIME){ this.wrong = this.sel; this.flash = 16; sfx("hit"); }
+  };
+
+  this.draw = function(){
+    sr(0, 0, W, H, C.black);
+    if (this.thin){
+      textCentre("not enough tags on the page", W / 2, 74, C.haze);
+      return;
+    }
+    textCentre("who used this?", W / 2, 26, C.haze);
+    panel(28, 38, W - 56, 18, C.ink, C.gold);
+    textCentre(this.q.tag, W / 2, 43, C.gold);
+
+    for (var i = 0; i < this.q.opts.length; i++){
+      var y = 68 + i * 20, si = this.q.opts[i];
+      var on = i === this.sel;
+      var col = C.mist, bg = C.ink;
+      if (this.flash > 0 && si === this.q.right){ col = C.paper; bg = C.moss; }
+      else if (this.flash > 0 && i === this.wrong){ col = C.paper; bg = C.red; }
+      else if (on) { col = C.paper; bg = C.shadow; }
+      panel(30, y, W - 60, 16, bg, on ? C.gold : C.slate);
+      text(SECTIONS[si].no + "  " + SECTIONS[si].name, 38, y + 4, col);
+    }
+
+    /* the clock */
+    var w = Math.round((1 - Math.min(1, this.t / TIME)) * (W - 60));
+    sr(30, H - 18, W - 60, 3, C.shadow);
+    if (w > 0) sr(30, H - 18, w, 3, this.t / TIME > 0.75 ? C.red : C.cyan);
   };
 }
 
@@ -2223,6 +2715,7 @@ function Brick(){
       if (b.x > k.x - 1 && b.x < k.x + BW - 1 && b.y > k.y - 1 && b.y < k.y + BH){
         k.alive = false;
         this.score += (ROWS - k.row) * 5;
+        sfx("point");
         var ox = Math.min(Math.abs(b.x - k.x), Math.abs(b.x - (k.x + BW)));
         var oy = Math.min(Math.abs(b.y - k.y), Math.abs(b.y - (k.y + BH)));
         if (oy < ox) b.vy = -b.vy; else b.vx = -b.vx;
@@ -2236,6 +2729,7 @@ function Brick(){
       this.stuck = true;
       b.vx *= 1.1; b.vy *= 1.1;
       this.score += 50;
+      sfx("point");
     }
   };
 
@@ -2261,7 +2755,10 @@ function Brick(){
 }
 
 function startGame(id){
-  G = id === "snake" ? new Snake() : (id === "roids" ? new Roids() : new Brick());
+  G = id === "snake" ? new Snake()
+    : id === "roids" ? new Roids()
+    : id === "stack" ? new Stack()
+    : new Brick();
   G.reset();
   mode = "game";
   syncPad();
@@ -2288,8 +2785,9 @@ function drawEnd(){
   var full = seenCount() === SECTIONS.length;
   textCentre(full ? "You read the whole thing." : "You made it to the flag.", W / 2, 24, C.paper);
 
+  var bt = bestTime();
   var rows = [
-    ["time",     clock(now - runStart)],
+    ["time",     clock(now - runStart) + (bt ? "   best " + clock(bt) : "")],
     ["stops read", seenCount() + " of " + SECTIONS.length],
     ["floppies",  disksFound() + " of " + DISKS.length],
     ["rides used", ridesCount() + " of " + VEHICLES.length]
@@ -2310,8 +2808,40 @@ function drawEnd(){
   textCentre("Stop 09 has his address on it.", W / 2, 131, C.haze);
   sr(3, H - 15, W - 6, 12, C.shadow);
   text("Space  stay", 7, H - 14, C.haze);
+  textCentre("S  save", W / 2, H - 14, C.haze);
   textRight("Esc  the page", W - 7, H - 14, C.haze);
 }
+
+/* ---------------------------------------------------------------
+   16f. TAKING THE RUN WITH YOU
+   The end screen was a dead end. The canvas already is the picture,
+   so the receipt is just that canvas blown up with the pixels kept
+   square.
+   --------------------------------------------------------------- */
+var btnSave = doc.getElementById("pb-save");
+
+function saveShot(){
+  if (!cv.toBlob) return;
+  var oc = doc.createElement("canvas");
+  oc.width = W * 4; oc.height = H * 4;
+  var octx = oc.getContext("2d");
+  octx.imageSmoothingEnabled = false;
+  octx.mozImageSmoothingEnabled = false;
+  octx.drawImage(cv, 0, 0, oc.width, oc.height);
+  oc.toBlob(function(b){
+    if (!b) return;
+    var u = URL.createObjectURL(b);
+    var a = doc.createElement("a");
+    a.href = u;
+    a.download = "arcade-run-" + clock(now - runStart).replace(":", "m") + "s.png";
+    doc.body.appendChild(a);
+    a.click();
+    doc.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(u); }, 4000);
+  });
+  sfx("point");
+}
+if (btnSave) btnSave.addEventListener("click", function(){ saveShot(); cv.focus(); });
 
 /* ---------------------------------------------------------------
    17. STARTING, AND GOING BACK TO THE PAGE
@@ -2352,6 +2882,7 @@ function start(){
   if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches && padEl) padEl.classList.add("on");
 
   runStart = performance.now();
+  bootT = reduceMotion ? 0 : 26;
   endShown = false;
   trail = [];
   ridesUsed = {};
