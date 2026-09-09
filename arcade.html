@@ -2006,9 +2006,10 @@ function drawArcade(){
    =============================================================== */
 var room = { x:120, vx:0, face:1, anim:0, sel:-1, door:false };
 var CABS = [
-  { id:"snake", name:"SNAKE",     x: 56, col:C.moss },
-  { id:"roids", name:"ASTEROIDS", x:120, col:C.cyan },
-  { id:"brick", name:"BREAKOUT",  x:184, col:C.red  }
+  { id:"snake", name:"SNAKE",     x: 38, col:C.moss },
+  { id:"roids", name:"ASTEROIDS", x: 92, col:C.cyan },
+  { id:"brick", name:"BRICKS",    x:146, col:C.red  },
+  { id:"stack", name:"STACK",     x:200, col:C.gold }
 ];
 
 function enterRoom(){
@@ -2083,6 +2084,9 @@ function drawRoom(){
     } else if (c.id === "roids"){
       sr(x - 9 + (ph % 18), WALL - 37, 3, 3, c.col);
       sr(x + 6 - (ph % 16), WALL - 31, 2, 2, C.mist);
+    } else if (c.id === "stack"){
+      for (var t2 = 0; t2 < 3; t2++)
+        sr(x - 8, WALL - 39 + t2 * 4, ((ph + t2 * 2) % 5) * 3 + 4, 2, t2 === 1 ? C.mist : c.col);
     } else {
       for (var k2 = 0; k2 < 5; k2++) sr(x - 9 + k2 * 4, WALL - 39, 3, 2, c.col);
       sr(x - 9 + (ph % 17), WALL - 31, 2, 2, C.mist);
@@ -2114,7 +2118,7 @@ function drawRoom(){
     panel(x2, 144, Math.min(w2, W - 4), 13, C.ink, C.gold);
     text(msg, x2 + 5, 147, C.paper);
   } else {
-    textCentre("three cabinets, one door", W / 2, 147, C.grey);
+    textCentre(CABS.length + " cabinets, one door", W / 2, 147, C.grey);
   }
 }
 
@@ -2393,6 +2397,123 @@ function Roids(){
   };
 }
 
+/* ---------------------------------------------------------------
+   STACK — the fourth cabinet.
+   Its questions are built out of the tags already harvested from
+   index.html, so like everything else here it carries no words of
+   its own and cannot drift from the page.
+   --------------------------------------------------------------- */
+function Stack(){
+  var self = this;
+  this.id = "stack"; this.name = "STACK"; this.usesB = false;
+
+  /* Only tags belonging to exactly one stop can be asked about -
+     FastAPI and Docker turn up all over the page, so a question
+     about them would have more than one right answer. */
+  function buildPool(){
+    var owner = {}, pool = [], i, j, k, t;
+    for (i = 0; i < SECTIONS.length; i++){
+      for (j = 0; j < SECTIONS[i].cards.length; j++){
+        var tg = SECTIONS[i].cards[j].tags || [];
+        for (k = 0; k < tg.length; k++){
+          t = String(tg[k]).trim();
+          if (!t) continue;
+          if (owner[t] === undefined) owner[t] = i;
+          else if (owner[t] !== i) owner[t] = -1;   /* shared, unusable */
+        }
+      }
+    }
+    for (t in owner){
+      if (!Object.prototype.hasOwnProperty.call(owner, t)) continue;
+      if (owner[t] >= 0) pool.push({ tag:t, sec:owner[t] });
+    }
+    return pool;
+  }
+
+  function pick(){
+    if (!self.pool.length) return null;
+    var q = self.pool.splice(Math.floor(Math.random() * self.pool.length), 1)[0];
+    var opts = [q.sec], guard = 0;
+    while (opts.length < 3 && opts.length < SECTIONS.length && guard++ < 60){
+      var r = Math.floor(Math.random() * SECTIONS.length);
+      if (opts.indexOf(r) < 0) opts.push(r);
+    }
+    for (var i = opts.length - 1; i > 0; i--){        /* shuffle */
+      var j = Math.floor(Math.random() * (i + 1)), tmp = opts[i];
+      opts[i] = opts[j]; opts[j] = tmp;
+    }
+    return { tag:q.tag, right:q.sec, opts:opts };
+  }
+
+  this.reset = function(){
+    this.pool = buildPool();
+    this.score = 0; this.over = false; this.sel = 0;
+    this.t = 0; this.flash = 0; this.wrong = -1;
+    this.q = pick();
+    this.thin = !this.q;                 /* page had too few unique tags */
+  };
+
+  this.press = function(k){
+    if (!this.q || this.flash > 0) return;
+    if (k === "up")   { this.sel = (this.sel + this.q.opts.length - 1) % this.q.opts.length; sfx("menu"); }
+    if (k === "down") { this.sel = (this.sel + 1) % this.q.opts.length; sfx("menu"); }
+    if (k === "a"){
+      if (this.q.opts[this.sel] === this.q.right){
+        this.score += 25 + Math.max(0, Math.round(this.t < 0 ? 0 : (TIME - this.t) / 6));
+        this.flash = 10; this.wrong = -1;
+        sfx("point");
+      } else {
+        this.wrong = this.sel; this.flash = 16;
+        sfx("hit");
+      }
+    }
+  };
+
+  var TIME = 300;                        /* frames per question */
+
+  this.update = function(dt){
+    if (this.thin) return;
+    if (this.flash > 0){
+      this.flash -= dt;
+      if (this.flash <= 0){
+        if (this.wrong >= 0){ endGame(this); return; }
+        this.q = pick(); this.sel = 0; this.t = 0;
+        if (!this.q){ endGame(this); return; }   /* ran the page dry: a win */
+      }
+      return;
+    }
+    this.t += dt;
+    if (this.t >= TIME){ this.wrong = this.sel; this.flash = 16; sfx("hit"); }
+  };
+
+  this.draw = function(){
+    sr(0, 0, W, H, C.black);
+    if (this.thin){
+      textCentre("not enough tags on the page", W / 2, 74, C.haze);
+      return;
+    }
+    textCentre("who used this?", W / 2, 26, C.haze);
+    panel(28, 38, W - 56, 18, C.ink, C.gold);
+    textCentre(this.q.tag, W / 2, 43, C.gold);
+
+    for (var i = 0; i < this.q.opts.length; i++){
+      var y = 68 + i * 20, si = this.q.opts[i];
+      var on = i === this.sel;
+      var col = C.mist, bg = C.ink;
+      if (this.flash > 0 && si === this.q.right){ col = C.paper; bg = C.moss; }
+      else if (this.flash > 0 && i === this.wrong){ col = C.paper; bg = C.red; }
+      else if (on) { col = C.paper; bg = C.shadow; }
+      panel(30, y, W - 60, 16, bg, on ? C.gold : C.slate);
+      text(SECTIONS[si].no + "  " + SECTIONS[si].name, 38, y + 4, col);
+    }
+
+    /* the clock */
+    var w = Math.round((1 - Math.min(1, this.t / TIME)) * (W - 60));
+    sr(30, H - 18, W - 60, 3, C.shadow);
+    if (w > 0) sr(30, H - 18, w, 3, this.t / TIME > 0.75 ? C.red : C.cyan);
+  };
+}
+
 /* ---------------- BREAKOUT ---------------- */
 function Brick(){
   var TOP = 16, COLS = 10, ROWS = 5, BW = 22, BH = 7, OX = 5, OY = 30;
@@ -2487,7 +2608,10 @@ function Brick(){
 }
 
 function startGame(id){
-  G = id === "snake" ? new Snake() : (id === "roids" ? new Roids() : new Brick());
+  G = id === "snake" ? new Snake()
+    : id === "roids" ? new Roids()
+    : id === "stack" ? new Stack()
+    : new Brick();
   G.reset();
   mode = "game";
   syncPad();
